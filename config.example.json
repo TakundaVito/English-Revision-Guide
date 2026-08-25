@@ -1,0 +1,4 @@
+{
+  "EMMAPREP_API_URL": "https://your-backend.example.com",
+  "EMMAPREP_APP_TOKEN": "optional-limited-app-token"
+}

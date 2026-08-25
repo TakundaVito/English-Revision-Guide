@@ -2,7 +2,13 @@
 
 The Flutter app connects to a backend that you control. Do not put an OpenAI, Anthropic, Gemini or other provider secret directly in the app; keep it on this backend.
 
-Configure the backend base URL and optional app-access token from **Coach → Settings**.
+The API is not configurable from the app interface. It is compiled into a release with Dart defines. Copy `config.example.json` to the ignored `config.production.json`, replace the placeholders, and build with:
+
+```powershell
+flutter build apk --release --split-per-abi --dart-define-from-file=config.production.json
+```
+
+The app reads `EMMAPREP_API_URL` and `EMMAPREP_APP_TOKEN` at compile time. Do not place an OpenAI, Anthropic, Gemini or other provider secret in this file: compiled values can be recovered from an APK. The provider secret belongs only on your backend. The optional app token should be limited, revocable and rate-limited.
 
 ## AI study coach
 
@@ -80,3 +86,15 @@ Synced content is cached locally and remains available offline. A subsequent suc
 - Rate-limit chat requests.
 - Log content version and update time, but avoid storing private student writing unless consented.
 - Review syllabus updates before publishing them through `/v1/content`.
+
+## Smaller Android releases
+
+Use `--split-per-abi` to create separate APKs for each processor architecture without removing functionality. Flutter writes them under `build/app/outputs/flutter-apk/`.
+
+To identify a connected phone's architecture:
+
+```powershell
+& "C:\Lair\AndroidSDK\platform-tools\adb.exe" shell getprop ro.product.cpu.abi
+```
+
+Typical output `arm64-v8a` uses `app-arm64-v8a-release.apk`. Keep the universal `flutter build apk --release` workflow only when one APK must support every architecture.
