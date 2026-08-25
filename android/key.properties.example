@@ -1,0 +1,4 @@
+storePassword=replace-with-private-value
+keyPassword=replace-with-private-value
+keyAlias=emmaprep
+storeFile=C:\\secure\\outside-repository\\emmaprep-release.jks

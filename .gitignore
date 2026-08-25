@@ -36,6 +36,7 @@ config.production.json
 .pub/
 /build/
 /coverage/
+/docs/verification/latest.json
 
 # Symbolication related
 app.*.symbols
