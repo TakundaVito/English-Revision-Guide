@@ -5,6 +5,42 @@ const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const supabaseKey = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
 const blue = Color(0xff2854c7), pink = Color(0xffff5f9e);
 
+Future<void> logAdminEvent(
+  String eventName, {
+  String level = 'info',
+  Map<String, dynamic> metadata = const {},
+}) async {
+  debugPrint('[EmmaPrep Admin][$level] $eventName $metadata');
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) return;
+  try {
+    await Supabase.instance.client.from('app_events').insert({
+      'actor_id': user.id,
+      'source': 'admin_app',
+      'event_name': eventName,
+      'level': level,
+      'app_version': '1.3.0',
+      'metadata': metadata,
+    });
+  } catch (error) {
+    debugPrint(
+      '[EmmaPrep Admin][warning] event_log_failed ${error.runtimeType}',
+    );
+  }
+}
+
+String safeFunctionError(Object error) {
+  if (error is FunctionException) {
+    final details = error.details;
+    if (details is Map && details['error'] != null) {
+      final requestId = details['requestId'];
+      return '${details['error']}${requestId == null ? '' : ' (request $requestId)'}';
+    }
+    return 'Function request failed with status ${error.status}.';
+  }
+  return 'Network request failed (${error.runtimeType}).';
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (supabaseUrl.isNotEmpty && supabaseKey.isNotEmpty) {
@@ -80,6 +116,9 @@ class _LoginPageState extends State<LoginPage> {
       );
     } on AuthException catch (e) {
       setState(() => error = e.message);
+      debugPrint(
+        '[EmmaPrep Admin][warning] sign_in_failed ${e.statusCode ?? 'auth_error'}',
+      );
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -201,6 +240,10 @@ class _AdminHomeState extends State<AdminHome> {
               label: Text('Users'),
             ),
             NavigationRailDestination(
+              icon: Icon(Icons.monitor_heart_rounded),
+              label: Text('Activity'),
+            ),
+            NavigationRailDestination(
               icon: Icon(Icons.settings_rounded),
               label: Text('Settings'),
             ),
@@ -221,6 +264,7 @@ class _AdminHomeState extends State<AdminHome> {
             ),
             2 => ReleasesPage(revision: revision, changed: refresh),
             3 => UsersPage(revision: revision, changed: refresh),
+            4 => ActivityPage(revision: revision),
             _ => SettingsPage(revision: revision, changed: refresh),
           },
         ),
@@ -513,6 +557,7 @@ class ReleasesPage extends StatelessWidget {
           context,
         ).showSnackBar(const SnackBar(content: Text('Content published.')));
       }
+      await logAdminEvent('content_published');
       changed();
     } catch (error) {
       if (context.mounted) {
@@ -623,6 +668,7 @@ class UsersPage extends StatelessWidget {
       ),
     );
     if (confirmed != true || !context.mounted) return;
+    await logAdminEvent('student_account_create_started');
     try {
       final response = await Supabase.instance.client.functions.invoke(
         'admin-create-student',
@@ -639,11 +685,21 @@ class UsersPage extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Account created for ${name.text.trim()}.')),
       );
+      await logAdminEvent('student_account_create_succeeded');
       changed();
     } catch (error) {
+      await logAdminEvent(
+        'student_account_create_failed',
+        level: 'error',
+        metadata: {'errorType': error.runtimeType.toString()},
+      );
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Account creation failed: $error')),
+          SnackBar(
+            content: Text(
+              'Account creation failed: ${safeFunctionError(error)}',
+            ),
+          ),
         );
       }
     }
@@ -685,6 +741,106 @@ class UsersPage extends StatelessWidget {
               },
             ),
     ),
+  );
+}
+
+class ActivityPage extends StatelessWidget {
+  final int revision;
+  const ActivityPage({required this.revision, super.key});
+  Future<List<Map<String, dynamic>>> load() async =>
+      List<Map<String, dynamic>>.from(
+        await Supabase.instance.client
+            .from('app_events')
+            .select('source,event_name,level,app_version,metadata,created_at')
+            .order('created_at', ascending: false)
+            .limit(250),
+      );
+  @override
+  Widget build(
+    BuildContext context,
+  ) => FutureBuilder<List<Map<String, dynamic>>>(
+    key: ValueKey(revision),
+    future: load(),
+    builder: (context, snapshot) {
+      final rows = snapshot.data ?? const <Map<String, dynamic>>[];
+      final errors = rows.where((row) => row['level'] == 'error').length;
+      final scans = rows
+          .where((row) => row['event_name'] == 'question_scan_succeeded')
+          .length;
+      return PageFrame(
+        title: 'Activity & diagnostics',
+        subtitle:
+            'Privacy-safe operational events. Credentials, emails, images, questions and answers are never recorded here.',
+        action: const Chip(label: Text('Last 250 events')),
+        child: snapshot.hasError
+            ? ErrorText(snapshot.error)
+            : !snapshot.hasData
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      Chip(
+                        avatar: const Icon(Icons.receipt_long_rounded),
+                        label: Text('${rows.length} recent events'),
+                      ),
+                      Chip(
+                        avatar: const Icon(Icons.error_outline_rounded),
+                        label: Text('$errors errors'),
+                      ),
+                      Chip(
+                        avatar: const Icon(Icons.document_scanner_rounded),
+                        label: Text('$scans successful scans'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Expanded(
+                    child: rows.isEmpty
+                        ? const Center(child: Text('No events recorded yet.'))
+                        : ListView.separated(
+                            itemCount: rows.length,
+                            separatorBuilder: (_, _) =>
+                                const Divider(height: 1),
+                            itemBuilder: (_, index) {
+                              final row = rows[index];
+                              final level = row['level'].toString();
+                              return ListTile(
+                                leading: Icon(
+                                  level == 'error'
+                                      ? Icons.error_rounded
+                                      : level == 'warning'
+                                      ? Icons.warning_rounded
+                                      : Icons.info_rounded,
+                                  color: level == 'error'
+                                      ? Colors.red
+                                      : level == 'warning'
+                                      ? Colors.orange
+                                      : blue,
+                                ),
+                                title: Text(
+                                  row['event_name'].toString().replaceAll(
+                                    '_',
+                                    ' ',
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  '${row['source']} · ${row['created_at']}\n${row['metadata']}',
+                                ),
+                                isThreeLine: true,
+                                trailing: Text(
+                                  row['app_version']?.toString() ?? '',
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+      );
+    },
   );
 }
 
@@ -795,6 +951,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Remote settings saved.')));
+      await logAdminEvent('remote_settings_saved');
       widget.changed();
     } catch (caught) {
       if (mounted) {
@@ -947,7 +1104,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 leading: Icon(Icons.admin_panel_settings_rounded),
                 title: Text('EmmaPrep Admin'),
                 subtitle: Text(
-                  'Version 1.2.0 — Takunda Vito\ntakunda.vito.co.zw',
+                  'Version 1.3.0 — Takunda Vito\ntakunda.vito.co.zw',
                 ),
               ),
               const Text(
