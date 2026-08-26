@@ -20,6 +20,37 @@ const compiledSupabaseUrl = String.fromEnvironment('EMMAPREP_SUPABASE_URL');
 const compiledSupabaseKey = String.fromEnvironment('EMMAPREP_SUPABASE_KEY');
 bool supabaseReady = false;
 
+String signedInStudentName() {
+  if (!supabaseReady) return 'Student';
+  final user = Supabase.instance.client.auth.currentUser;
+  final displayName = user?.userMetadata?['display_name']?.toString().trim();
+  if (displayName != null && displayName.isNotEmpty) return displayName;
+  final emailName = user?.email?.split('@').first.trim();
+  return emailName == null || emailName.isEmpty ? 'Student' : emailName;
+}
+
+String signedInStudentInitial() {
+  final name = signedInStudentName();
+  return name.characters.first.toUpperCase();
+}
+
+String coachDisplayText(String raw) {
+  var text = raw
+      .replaceAll(RegExp(r'<think>[\s\S]*?</think>', caseSensitive: false), '')
+      .replaceAll(r'\n', '\n')
+      .replaceAll(RegExp(r'```(?:markdown|text)?', caseSensitive: false), '')
+      .trim();
+  text = text
+      .split('\n')
+      .map((line) {
+        var cleaned = line.replaceFirst(RegExp(r'^\s*#{1,6}\s*'), '');
+        cleaned = cleaned.replaceFirst(RegExp(r'^\s*[-*]\s+'), '• ');
+        return cleaned.replaceAll('**', '').replaceAll('__', '');
+      })
+      .join('\n');
+  return text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+}
+
 Future<void> logStudentEvent(
   String eventName, {
   String level = 'info',
@@ -35,7 +66,7 @@ Future<void> logStudentEvent(
       'source': 'student_app',
       'event_name': eventName,
       'level': level,
-      'app_version': '1.5.0',
+      'app_version': '1.5.2',
       'metadata': metadata,
     });
   } catch (error) {
@@ -1097,21 +1128,39 @@ class Store extends ChangeNotifier {
         logStudentEvent(
           'question_scan_failed',
           level: 'error',
-          metadata: {'status': response.statusCode},
+          metadata: {
+            'status': response.statusCode,
+            if (data['providerStatus'] != null)
+              'providerStatus': data['providerStatus'],
+          },
         ),
+      );
+      debugPrint(
+        '[EmmaPrep Student][error] question_scan_provider_status ${data['providerStatus'] ?? 'unknown'} request=${data['requestId'] ?? 'unknown'}',
       );
       throw FormatException(
         '${data['error']?.toString() ?? 'Question scan failed.'}${data['requestId'] == null ? '' : ' (request ${data['requestId']})'}',
       );
     }
-    final items = List<Map<String, dynamic>>.from(
+    final candidates = List<Map<String, dynamic>>.from(
       (data['questions'] as List? ?? []).map(
         (item) => Map<String, dynamic>.from(item),
       ),
     );
-    for (final item in items) {
-      item['passage'] = item['passage']?.toString().trim() ?? '';
-      Question.fromJson({...item, 'examStyle': 'zimsec-4005'});
+    final items = <Map<String, dynamic>>[];
+    for (final item in candidates) {
+      try {
+        item['passage'] = item['passage']?.toString().trim() ?? '';
+        Question.fromJson({...item, 'examStyle': 'zimsec-4005'});
+        items.add(item);
+      } on FormatException {
+        debugPrint('[EmmaPrep Student][warning] invalid_scanned_item_skipped');
+      }
+    }
+    if (items.isEmpty) {
+      throw const FormatException(
+        'The pages were read, but no complete ZIMSEC English questions could be prepared. Try one clearer page at a time.',
+      );
     }
     unawaited(
       logStudentEvent(
@@ -1654,14 +1703,18 @@ class Home extends StatelessWidget {
                 ),
                 Positioned(
                   left: 0,
-                  child: CircleAvatar(
-                    radius: 22,
-                    backgroundColor: coral,
-                    child: Text(
-                      '${s.streak}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
+                  child: Tooltip(
+                    message: 'Signed in as ${signedInStudentName()}',
+                    child: CircleAvatar(
+                      radius: 22,
+                      backgroundColor: coral,
+                      foregroundColor: Colors.white,
+                      child: Text(
+                        signedInStudentInitial(),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                   ),
@@ -1855,6 +1908,35 @@ class AccessibilityPage extends StatelessWidget {
       builder: (_, _) => ListView(
         padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
         children: [
+          if (supabaseReady &&
+              Supabase.instance.client.auth.currentUser != null) ...[
+            Card(
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: plum,
+                  foregroundColor: Colors.white,
+                  child: Text(
+                    signedInStudentInitial(),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+                title: Text(signedInStudentName()),
+                subtitle: Text(
+                  Supabase.instance.client.auth.currentUser!.email ??
+                      'EmmaPrep account',
+                ),
+                trailing: TextButton.icon(
+                  onPressed: () async {
+                    await Supabase.instance.client.auth.signOut();
+                    if (c.mounted) Navigator.pop(c);
+                  },
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('Sign out'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
@@ -1957,7 +2039,7 @@ class AccessibilityPage extends StatelessWidget {
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            Text('Version 1.5.0 (build 6)'),
+                            Text('Version 1.5.2 (build 8)'),
                           ],
                         ),
                       ),
@@ -1996,28 +2078,6 @@ class AccessibilityPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          if (supabaseReady &&
-              Supabase.instance.client.auth.currentUser != null) ...[
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.account_circle_rounded),
-                title: const Text('Signed-in student'),
-                subtitle: Text(
-                  Supabase.instance.client.auth.currentUser!.email ??
-                      'EmmaPrep account',
-                ),
-                trailing: TextButton.icon(
-                  onPressed: () async {
-                    await Supabase.instance.client.auth.signOut();
-                    if (c.mounted) Navigator.pop(c);
-                  },
-                  icon: const Icon(Icons.logout_rounded),
-                  label: const Text('Sign out'),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-          ],
           FilledButton.icon(
             icon: const Icon(Icons.save_rounded),
             label: const Text('Save settings'),
@@ -2652,36 +2712,69 @@ class _QuestionScannerPageState extends State<QuestionScannerPage> {
   final picker = ImagePicker();
   final images = <XFile>[];
   List<Map<String, dynamic>> results = [];
-  bool busy = false;
+  bool busy = false, pickerBusy = false;
   String? error;
 
   Future<void> addCamera() async {
-    final image = await picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 72,
-      maxWidth: 1600,
-    );
-    if (image != null && mounted) {
-      setState(() {
-        if (images.length < 3) {
-          images.add(image);
-        }
-      });
+    if (pickerBusy) return;
+    setState(() => pickerBusy = true);
+    try {
+      final image = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 72,
+        maxWidth: 1600,
+      );
+      if (image != null && mounted) {
+        final stable = XFile.fromData(
+          await image.readAsBytes(),
+          name: 'camera-${DateTime.now().millisecondsSinceEpoch}.jpg',
+          mimeType: 'image/jpeg',
+        );
+        setState(() {
+          if (images.length < 3) images.add(stable);
+        });
+      }
+    } catch (caught) {
+      debugPrint(
+        '[EmmaPrep Student][error] scanner_camera_failed ${caught.runtimeType}',
+      );
+    } finally {
+      if (mounted) setState(() => pickerBusy = false);
     }
   }
 
   Future<void> addGallery() async {
-    final picked = await picker.pickMultiImage(
-      imageQuality: 72,
-      maxWidth: 1600,
-      limit: 3,
-    );
-    if (mounted) {
-      setState(() {
-        images
-          ..clear()
-          ..addAll(picked.take(3));
-      });
+    if (pickerBusy) return;
+    setState(() => pickerBusy = true);
+    try {
+      final picked = await picker.pickMultiImage(
+        imageQuality: 72,
+        maxWidth: 1600,
+        limit: 3,
+      );
+      final stable = <XFile>[];
+      for (final image in picked.take(3)) {
+        stable.add(
+          XFile.fromData(
+            await image.readAsBytes(),
+            name: image.name,
+            mimeType: image.mimeType ?? 'image/jpeg',
+          ),
+        );
+      }
+      if (mounted) {
+        setState(() {
+          images
+            ..clear()
+            ..addAll(stable);
+        });
+      }
+    } catch (caught) {
+      debugPrint(
+        '[EmmaPrep Student][error] scanner_gallery_failed ${caught.runtimeType}',
+      );
+    } finally {
+      if (mounted) setState(() => pickerBusy = false);
     }
   }
 
@@ -2758,7 +2851,7 @@ class _QuestionScannerPageState extends State<QuestionScannerPage> {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: busy ? null : addCamera,
+                onPressed: busy || pickerBusy ? null : addCamera,
                 icon: const Icon(Icons.camera_alt_rounded),
                 label: const Text('Camera'),
               ),
@@ -2766,7 +2859,7 @@ class _QuestionScannerPageState extends State<QuestionScannerPage> {
             const SizedBox(width: 10),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: busy ? null : addGallery,
+                onPressed: busy || pickerBusy ? null : addGallery,
                 icon: const Icon(Icons.photo_library_rounded),
                 label: const Text('Gallery'),
               ),
@@ -3157,33 +3250,54 @@ class _CoachPageState extends State<CoachPage> {
       'Hi Emma! I’m your English study coach. Ask me to explain a skill, mark a short answer, create a practice question, or help you plan a composition.',
     ),
   ];
-  bool sending = false;
+  bool sending = false, pickerBusy = false;
 
   Future<void> addCoachPictures({required bool camera}) async {
-    if (camera) {
-      final image = await picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 72,
-        maxWidth: 1600,
-      );
-      if (image != null && mounted) {
+    if (pickerBusy) return;
+    setState(() => pickerBusy = true);
+    try {
+      final selected = camera
+          ? <XFile>[
+              if (await picker.pickImage(
+                    source: ImageSource.camera,
+                    imageQuality: 72,
+                    maxWidth: 1600,
+                  )
+                  case final XFile image)
+                image,
+            ]
+          : await picker.pickMultiImage(
+              imageQuality: 72,
+              maxWidth: 1600,
+              limit: 3,
+            );
+      final stable = <XFile>[];
+      for (final image in selected.take(3)) {
+        stable.add(
+          XFile.fromData(
+            await image.readAsBytes(),
+            name: image.name,
+            mimeType: image.mimeType ?? 'image/jpeg',
+          ),
+        );
+      }
+      if (mounted) {
         setState(() {
-          if (attachments.length < 3) attachments.add(image);
+          if (camera) {
+            attachments.addAll(stable.take(3 - attachments.length));
+          } else {
+            attachments
+              ..clear()
+              ..addAll(stable);
+          }
         });
       }
-      return;
-    }
-    final images = await picker.pickMultiImage(
-      imageQuality: 72,
-      maxWidth: 1600,
-      limit: 3,
-    );
-    if (mounted) {
-      setState(() {
-        attachments
-          ..clear()
-          ..addAll(images.take(3));
-      });
+    } catch (caught) {
+      debugPrint(
+        '[EmmaPrep Student][error] coach_picker_failed ${caught.runtimeType}',
+      );
+    } finally {
+      if (mounted) setState(() => pickerBusy = false);
     }
   }
 
@@ -3314,7 +3428,7 @@ class _CoachPageState extends State<CoachPage> {
           'The coach returned an empty response.';
       if (mounted) {
         setState(() {
-          messages.add(ChatMessage(false, reply));
+          messages.add(ChatMessage(false, coachDisplayText(reply)));
           attachments.clear();
         });
       }
@@ -3452,8 +3566,8 @@ class _CoachPageState extends State<CoachPage> {
                         : Theme.of(c).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  child: Text(
-                    m.text,
+                  child: SelectableText(
+                    m.user ? m.text : coachDisplayText(m.text),
                     style: TextStyle(
                       color: m.user
                           ? Colors.white
@@ -3470,7 +3584,7 @@ class _CoachPageState extends State<CoachPage> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             PopupMenuButton<String>(
-              enabled: !sending,
+              enabled: !sending && !pickerBusy,
               tooltip: 'Attach pages',
               icon: const Icon(Icons.add_circle_outline_rounded),
               onSelected: (value) {

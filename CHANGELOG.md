@@ -2,6 +2,33 @@
 
 All notable changes to EmmaPrep English are recorded here. Versions follow `major.minor.patch+androidBuild`.
 
+## 1.5.2+8 - 2026-08-26
+
+### Fixed
+
+- Hidden provider reasoning ensures Coach displays only the learner-facing answer.
+- Groq Qwen picture scans use its compatible hidden-reasoning JSON mode.
+- The dashboard shows the signed-in learner's initial instead of a confusing zero.
+
+### Improved
+
+- Scanned questions include a practical “How to attack it” explanation.
+- A malformed AI result is skipped without discarding the other valid scanned questions.
+
+## 1.5.1+7 - 2026-08-26
+
+### Fixed
+
+- Replaced Groq's retired Llama 3.3 tutor model with the production `openai/gpt-oss-20b` model.
+- Stabilised camera/gallery bytes before upload, preventing missing temporary paths.
+- Prevented concurrent image-picker launches and repeated `already_active` exceptions.
+
+### Improved
+
+- Clean Coach typography strips raw Markdown markers and normalises excessive spacing.
+- Dashboard and Settings show the signed-in student's initial and identity at a glance.
+- Provider health now verifies that both configured tutor and vision models are available.
+
 ## 1.5.0+6 - 2026-08-26
 
 ### Fixed
@@ -22,7 +49,6 @@ All notable changes to EmmaPrep English are recorded here. Versions follow `majo
 - EnglishTutor E branding on the native splash, student login and Coach header.
 - Coach attachments for camera pictures, gallery pictures and the first three pages of a PDF.
 - Administrator provider-key connectivity check and actionable upstream provider failures.
-- Replaced Groq's retired Llama 3.3 tutor model with the production `openai/gpt-oss-20b` model.
 
 ### Security
 

@@ -19,7 +19,7 @@ Future<void> logAdminEvent(
       'source': 'admin_app',
       'event_name': eventName,
       'level': level,
-      'app_version': '1.3.0',
+      'app_version': '1.4.1',
       'metadata': metadata,
     });
   } catch (error) {
@@ -1206,6 +1206,16 @@ class _SettingsPageState extends State<SettingsPage> {
                     : '${health?['selectedProvider'] ?? 'Unknown'} · HTTP ${health?['selectedProviderStatus'] ?? 'not tested'}',
               ),
               StatusTile(
+                'Tutor model available',
+                health?['tutorModelAvailable'] == true,
+                detail: health == null ? 'Status unavailable' : groqModel,
+              ),
+              StatusTile(
+                'Picture model available',
+                health?['visionModelAvailable'] == true,
+                detail: health == null ? 'Status unavailable' : groqVisionModel,
+              ),
+              StatusTile(
                 'Rate-limit salt configured',
                 health?['rateLimitSaltConfigured'] == true,
                 detail: health == null ? 'Status unavailable' : null,
@@ -1229,7 +1239,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 leading: Icon(Icons.admin_panel_settings_rounded),
                 title: Text('englishTutor'),
                 subtitle: Text(
-                  'Version 1.4.0 — Takunda Vito\ntakunda.vito.co.zw',
+                  'Version 1.4.1 — Takunda Vito\ntakunda.vito.co.zw',
                 ),
               ),
               const Text(

@@ -1,7 +1,7 @@
 # EmmaPrep VI26 compliance record
 
 Assessment date: 2026-08-25  
-Version assessed: 1.5.0+6
+Version assessed: 1.5.2+8
 
 The release verifier covers both the student Flutter app and the separate Flutter Web administrator app. Admin gates include locked dependency resolution, formatting, fatal-info analysis, widget tests and a web build.
 Overall result: **NOT YET COMPLIANT - implementation complete, release evidence pending**

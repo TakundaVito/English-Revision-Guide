@@ -39,7 +39,7 @@ Deno.serve(async (request) => {
   if (!message) return Response.json({ error: 'Message is required' }, { status: 400, headers: corsHeaders })
   if (images.some((image: string) => image.length > 6_000_000)) return Response.json({ error: 'An attachment is too large', requestId }, { status: 413, headers: corsHeaders })
 
-  const instructions = 'You are EmmaPrep, a warm and patient tutor for Emmaculate. Teach only ZIMSEC O-Level English Language 4005 Paper 1 and Paper 2 skills. Use simple Zimbabwe-relevant examples, active recall, and one short practice question at a time. Never claim invented rules are official. Give helpful feedback before a model answer.'
+  const instructions = 'You are EmmaPrep, a warm and patient tutor for Emmaculate. Teach only ZIMSEC O-Level English Language 4005 Paper 1 and Paper 2 skills. Use simple Zimbabwe-relevant examples, active recall, and one short practice question at a time. Never claim invented rules are official. Give helpful feedback before a model answer. Write clean plain text, not Markdown. Use short paragraphs and the • character for simple lists. Do not output # headings, asterisks, underscores, code fences, or escaped newline characters.'
   const groqUserContent = images.length === 0 ? message : [
     { type: 'text', text: message },
     ...images.map((image: string) => ({ type: 'image_url', image_url: { url: image } })),
@@ -48,17 +48,19 @@ Deno.serve(async (request) => {
     { type: 'input_text', text: message },
     ...images.map((image: string) => ({ type: 'input_image', image_url: image, detail: 'high' })),
   ]
+  const groqModel = String(images.length > 0 ? config.groq_vision_model ?? 'qwen/qwen3.6-27b' : config.groq_model ?? 'openai/gpt-oss-20b')
   const modelResponse = await fetch(provider === 'groq' ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(provider === 'groq' ? {
-      model: String(images.length > 0 ? config.groq_vision_model ?? 'qwen/qwen3.6-27b' : config.groq_model ?? 'openai/gpt-oss-20b'),
+      model: groqModel,
       messages: [
         { role: 'system', content: instructions },
         ...history.map((item: any) => ({ role: item.role === 'assistant' ? 'assistant' : 'user', content: String(item.content ?? '') })),
         { role: 'user', content: groqUserContent },
       ],
       max_completion_tokens: 700,
+      ...(groqModel.startsWith('qwen/') ? { reasoning_format: 'hidden' } : { include_reasoning: false }),
       user: 'emmaprep-student',
     } : {
       model: String(config.ai_model ?? Deno.env.get('OPENAI_MODEL') ?? 'gpt-5.4-mini'),
@@ -83,9 +85,13 @@ Deno.serve(async (request) => {
     return Response.json({ error: reason, requestId, providerStatus: modelResponse.status }, { status: 502, headers: corsHeaders })
   }
   const result = await modelResponse.json()
-  const reply = provider === 'groq'
+  const rawReply = provider === 'groq'
     ? result.choices?.[0]?.message?.content
     : result.output_text ?? result.output?.flatMap((item: any) => item.content ?? []).find((item: any) => item.type === 'output_text')?.text
+  const reply = String(rawReply ?? '')
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/```(?:markdown|text)?/gi, '')
+    .trim()
   console.info(JSON.stringify({ event: 'chat_success', requestId, provider }))
   return Response.json({ reply: reply ?? 'Please try that question again.', requestId }, { headers: corsHeaders })
 })

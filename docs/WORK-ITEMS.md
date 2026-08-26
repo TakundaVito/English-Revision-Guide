@@ -1,6 +1,6 @@
 # EmmaPrep VI26 engineering work items
 
-Release target: `1.5.0+6`
+Release target: `1.5.2+8`
 
 | ID | Requirement | Acceptance criteria | Verification | State |
 | --- | --- | --- | --- | --- |

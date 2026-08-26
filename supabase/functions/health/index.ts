@@ -29,6 +29,7 @@ Deno.serve(async (request) => {
   const provider = config.ai_provider === 'groq' ? 'groq' : 'openai'
   const providerKey = Deno.env.get(provider === 'groq' ? 'GROQ_API_KEY' : 'OPENAI_API_KEY')
   let providerStatus: number | null = null
+  let availableModels: string[] = []
   if (providerKey) {
     try {
       const providerResponse = await fetch(provider === 'groq' ? 'https://api.groq.com/openai/v1/models' : 'https://api.openai.com/v1/models', {
@@ -36,6 +37,10 @@ Deno.serve(async (request) => {
         signal: AbortSignal.timeout(8000),
       })
       providerStatus = providerResponse.status
+      if (providerResponse.ok) {
+        const modelPayload = await providerResponse.json()
+        availableModels = Array.isArray(modelPayload.data) ? modelPayload.data.map((model: any) => String(model.id)) : []
+      }
     } catch (_) {
       providerStatus = 0
     }
@@ -49,6 +54,8 @@ Deno.serve(async (request) => {
     selectedProvider: provider,
     selectedProviderReachable: providerStatus != null && providerStatus >= 200 && providerStatus < 300,
     selectedProviderStatus: providerStatus,
+    tutorModelAvailable: provider !== 'groq' || availableModels.includes(String(config.groq_model ?? 'openai/gpt-oss-20b')),
+    visionModelAvailable: provider !== 'groq' || availableModels.includes(String(config.groq_vision_model ?? 'qwen/qwen3.6-27b')),
     rateLimitSaltConfigured: Boolean(Deno.env.get('RATE_LIMIT_SALT')),
   }, { headers: corsHeaders })
 })

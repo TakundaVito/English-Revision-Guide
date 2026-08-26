@@ -32,7 +32,7 @@ Deno.serve(async (request) => {
   if (images.length === 0) return Response.json({ error: 'At least one image is required' }, { status: 400, headers: cors })
   if (images.some((image: string) => image.length > 6_000_000)) return Response.json({ error: 'An image is too large' }, { status: 413, headers: cors })
 
-  const prompt = 'Read the images in page order. They may contain a passage, questions, or a passage followed by questions on later pages. Transcribe the relevant passage into the passage field once for each related question, preserving paragraph order across images. Extract every visible question relevant to ZIMSEC O-Level English Language 4005 Paper 1 or Paper 2 and answer it accurately. Turn non-multiple-choice questions into four-option practice questions while preserving the tested skill. If a question depends on the passage, use evidence from it in the explanation. If text is unclear, say so instead of guessing. Return JSON shaped exactly as {"questions":[{"paper":"Paper 1","passage":"passage text or empty string","question":"...","answers":["...","...","...","..."],"correctIndex":0,"explanation":"...","studyNote":"..."}]}.'
+  const prompt = 'Read the images in page order. They may contain a passage, questions, or a passage followed by questions on later pages. Transcribe the relevant passage into the passage field once for each related question, preserving paragraph order across images. Extract every visible question relevant to ZIMSEC O-Level English Language 4005 Paper 1 or Paper 2 and answer it accurately. For an open-ended question, put the best model answer first and add three short plausible alternatives so the learner can practise it as a four-option question without changing the tested skill. In explanation, start with “How to attack it:” and give simple numbered actions, then explain why the model answer works using passage evidence where needed. The studyNote must give one short exam tip. If text is unclear, state what is unclear instead of guessing. Return only JSON shaped exactly as {"questions":[{"paper":"Paper 1","passage":"passage text or empty string","question":"...","answers":["...","...","...","..."],"correctIndex":0,"explanation":"...","studyNote":"..."}]}.'
   const content = [
     { type: 'input_text', text: prompt },
     ...images.map((image: string) => ({ type: 'input_image', image_url: image, detail: 'high' })),
@@ -48,7 +48,8 @@ Deno.serve(async (request) => {
       model: String(config.groq_vision_model ?? 'qwen/qwen3.6-27b'),
       messages: [{ role: 'user', content: groqContent }],
       response_format: { type: 'json_object' },
-      max_completion_tokens: 2200,
+      reasoning_format: 'hidden',
+      max_completion_tokens: 4500,
     } : {
       model: String(config.ai_model ?? 'gpt-5.4-mini'),
       input: [{ role: 'user', content }],
@@ -68,7 +69,8 @@ Deno.serve(async (request) => {
     }),
   })
   if (!response.ok) {
-    console.error(JSON.stringify({ event: 'question_scan_provider_failed', requestId, provider, status: response.status, imageCount: images.length }))
+    const providerError = (await response.text()).slice(0, 800)
+    console.error(JSON.stringify({ event: 'question_scan_provider_failed', requestId, provider, status: response.status, imageCount: images.length, providerError }))
     const reason = response.status === 401 || response.status === 403
       ? `${provider === 'groq' ? 'Groq' : 'OpenAI'} rejected its API key`
       : response.status === 404
@@ -83,7 +85,8 @@ Deno.serve(async (request) => {
   const result = await response.json()
   try {
     const raw = provider === 'groq' ? result.choices?.[0]?.message?.content : result.output_text
-    const parsed = JSON.parse(raw ?? '{}')
+    const clean = String(raw ?? '{}').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^```(?:json)?\s*|\s*```$/gi, '').trim()
+    const parsed = JSON.parse(clean)
     console.info(JSON.stringify({ event: 'question_scan_success', requestId, imageCount: images.length, questionCount: parsed.questions?.length ?? 0 }))
     return Response.json({ ...parsed, requestId }, { headers: cors })
   } catch (_) {

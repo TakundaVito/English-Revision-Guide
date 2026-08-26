@@ -48,6 +48,16 @@ void main() {
     expect(question.examStyle, 'zimsec-4005');
   });
 
+  test('coach output never exposes hidden reasoning or markdown noise', () {
+    final displayed = coachDisplayText(
+      '<think>Private chain of thought</think>\n**Answer**\n- Read the command word.',
+    );
+    expect(displayed, isNot(contains('Private chain of thought')));
+    expect(displayed, isNot(contains('<think>')));
+    expect(displayed, isNot(contains('**')));
+    expect(displayed, contains('• Read the command word.'));
+  });
+
   testWidgets('shows Emmaculate personalised home screen', (tester) async {
     await tester.pumpWidget(const EmmaPrep());
     await tester.pumpAndSettle();
