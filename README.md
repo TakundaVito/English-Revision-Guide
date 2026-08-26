@@ -13,6 +13,7 @@ Current version: **1.2.0+3**
 - Dark theme, high contrast, larger text, simple explanations and reduced motion
 - AI coach through a backend that keeps provider credentials off the device
 - Remote lesson/question updates cached for offline use
+- Separate Flutter Web administrator dashboard with authenticated draft and publish workflows
 
 ## Development
 
@@ -40,6 +41,10 @@ Production Android signing uses the ignored `android/key.properties`, based on `
 ```powershell
 flutter build apk --release --split-per-abi --dart-define-from-file=config.production.json
 ```
+
+## Remote administration
+
+Supabase schema, Row Level Security policies and Edge Functions live under `supabase/`. The Flutter Web dashboard lives under `admin/`. Follow `docs/SUPABASE-SETUP.md` to install the migration, create the first administrator, deploy the API and run the dashboard.
 
 Identify a connected phone architecture with:
 

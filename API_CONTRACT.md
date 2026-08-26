@@ -21,6 +21,8 @@ Content-Type: application/json
 Authorization: Bearer OPTIONAL_APP_TOKEN
 ```
 
+For a modern Supabase publishable key, the app sends `apikey: sb_publishable_...` instead of treating the key as a bearer JWT.
+
 Request:
 
 ```json

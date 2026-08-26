@@ -10,6 +10,7 @@ All notable changes to EmmaPrep English are recorded here. Versions follow `majo
 - Strict remote-content validation for the `zimsec-4005` curriculum and exam style.
 - Home settings gear and clearer ZIMSEC 4005 practice labelling.
 - Explicit settings save confirmation and an About section with developer metadata.
+- Supabase database migration, Row Level Security, content/chat Edge Functions and Flutter Web admin dashboard.
 
 ### Changed
 

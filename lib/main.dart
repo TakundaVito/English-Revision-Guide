@@ -939,7 +939,9 @@ class Store extends ChangeNotifier {
 
   Map<String, String> get apiHeaders => {
     'Content-Type': 'application/json',
-    if (apiToken.isNotEmpty) 'Authorization': 'Bearer $apiToken',
+    if (apiToken.startsWith('sb_publishable_')) 'apikey': apiToken,
+    if (apiToken.isNotEmpty && !apiToken.startsWith('sb_publishable_'))
+      'Authorization': 'Bearer $apiToken',
   };
 
   bool _decodeContent(String? raw) {
