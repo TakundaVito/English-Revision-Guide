@@ -10,7 +10,7 @@ Future<void> logAdminEvent(
   String level = 'info',
   Map<String, dynamic> metadata = const {},
 }) async {
-  debugPrint('[EmmaPrep Admin][$level] $eventName $metadata');
+  debugPrint('[englishTutor][$level] $eventName $metadata');
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return;
   try {
@@ -23,8 +23,9 @@ Future<void> logAdminEvent(
       'metadata': metadata,
     });
   } catch (error) {
+    final code = error is PostgrestException ? ' code=${error.code}' : '';
     debugPrint(
-      '[EmmaPrep Admin][warning] event_log_failed ${error.runtimeType}',
+      '[englishTutor][warning] event_log_failed ${error.runtimeType}$code',
     );
   }
 }
@@ -54,11 +55,17 @@ class AdminApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
-    title: 'EmmaPrep Admin',
+    title: 'englishTutor',
     theme: ThemeData(
       colorScheme: ColorScheme.fromSeed(seedColor: blue),
       useMaterial3: true,
       scaffoldBackgroundColor: const Color(0xfffff8fc),
+      cardTheme: const CardThemeData(elevation: 0, margin: EdgeInsets.zero),
+      inputDecorationTheme: const InputDecorationTheme(
+        border: OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.white,
+      ),
     ),
     home: supabaseUrl.isEmpty || supabaseKey.isEmpty
         ? const MissingConfig()
@@ -75,7 +82,7 @@ class MissingConfig extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.all(28),
           child: SelectableText(
-            'EmmaPrep Admin needs configuration.\n\nCopy config.example.json to config.local.json, then run:\nflutter run -d chrome --dart-define-from-file=config.local.json',
+            'englishTutor needs configuration.\n\nCopy config.example.json to config.local.json, then run:\nflutter run -d chrome --dart-define-from-file=config.local.json',
           ),
         ),
       ),
@@ -117,7 +124,7 @@ class _LoginPageState extends State<LoginPage> {
     } on AuthException catch (e) {
       setState(() => error = e.message);
       debugPrint(
-        '[EmmaPrep Admin][warning] sign_in_failed ${e.statusCode ?? 'auth_error'}',
+        '[englishTutor][warning] sign_in_failed ${e.statusCode ?? 'auth_error'}',
       );
     } finally {
       if (mounted) setState(() => busy = false);
@@ -135,14 +142,10 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.admin_panel_settings_rounded,
-                  size: 54,
-                  color: blue,
-                ),
+                const EnglishTutorLogo(size: 70),
                 const SizedBox(height: 12),
                 const Text(
-                  'EmmaPrep Admin',
+                  'englishTutor',
                   style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 22),
@@ -191,6 +194,51 @@ class _LoginPageState extends State<LoginPage> {
   );
 }
 
+class EnglishTutorLogo extends StatelessWidget {
+  final double size;
+  const EnglishTutorLogo({this.size = 48, super.key});
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: size,
+    child: Stack(
+      alignment: Alignment.center,
+      children: [
+        Transform.rotate(
+          angle: .62,
+          child: Container(
+            width: size * .78,
+            height: size * .43,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(size),
+              border: Border.all(color: blue, width: size * .1),
+            ),
+          ),
+        ),
+        Transform.rotate(
+          angle: -.62,
+          child: Container(
+            width: size * .78,
+            height: size * .43,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(size),
+              border: Border.all(color: pink, width: size * .1),
+            ),
+          ),
+        ),
+        Container(
+          width: size * .16,
+          height: size * .16,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class AdminHome extends StatefulWidget {
   const AdminHome({super.key});
   @override
@@ -202,7 +250,13 @@ class _AdminHomeState extends State<AdminHome> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('EmmaPrep Admin'),
+      title: const Row(
+        children: [
+          EnglishTutorLogo(size: 34),
+          SizedBox(width: 10),
+          Text('englishTutor'),
+        ],
+      ),
       actions: [
         IconButton(
           tooltip: 'Refresh',
@@ -861,6 +915,9 @@ class _SettingsPageState extends State<SettingsPage> {
   final maintenanceNotice = TextEditingController();
   final cacheSeconds = TextEditingController();
   String model = 'gpt-5.4-mini';
+  String provider = 'openai';
+  String groqModel = 'llama-3.3-70b-versatile';
+  String groqVisionModel = 'qwen/qwen3.6-27b';
   bool aiEnabled = true,
       registrationEnabled = false,
       scannerEnabled = true,
@@ -891,6 +948,12 @@ class _SettingsPageState extends State<SettingsPage> {
       maintenanceNotice.text = values['maintenance_notice']?.toString() ?? '';
       cacheSeconds.text = values['content_cache_seconds']?.toString() ?? '300';
       model = values['ai_model']?.toString() ?? 'gpt-5.4-mini';
+      provider = values['ai_provider']?.toString() == 'groq'
+          ? 'groq'
+          : 'openai';
+      groqModel = values['groq_model']?.toString() ?? 'llama-3.3-70b-versatile';
+      groqVisionModel =
+          values['groq_vision_model']?.toString() ?? 'qwen/qwen3.6-27b';
       aiEnabled = values['ai_enabled'] as bool? ?? true;
       registrationEnabled = values['registration_enabled'] as bool? ?? false;
       scannerEnabled = values['question_scanner_enabled'] as bool? ?? true;
@@ -935,6 +998,13 @@ class _SettingsPageState extends State<SettingsPage> {
           'updated_by': userId,
         },
         {'key': 'ai_model', 'value': model, 'updated_by': userId},
+        {'key': 'ai_provider', 'value': provider, 'updated_by': userId},
+        {'key': 'groq_model', 'value': groqModel, 'updated_by': userId},
+        {
+          'key': 'groq_vision_model',
+          'value': groqVisionModel,
+          'updated_by': userId,
+        },
         {'key': 'content_cache_seconds', 'value': cache, 'updated_by': userId},
         {
           'key': 'maintenance_notice',
@@ -995,23 +1065,59 @@ class _SettingsPageState extends State<SettingsPage> {
                 onChanged: (value) => setState(() => aiEnabled = value),
               ),
               DropdownButtonFormField<String>(
-                initialValue: model,
-                decoration: input('OpenAI model'),
+                initialValue: provider,
+                decoration: input('AI provider'),
                 items: const [
-                  DropdownMenuItem(
-                    value: 'gpt-5.4-mini',
-                    child: Text('GPT-5.4 mini — economical tutor'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'gpt-5.4',
-                    child: Text('GPT-5.4 — higher capability'),
-                  ),
+                  DropdownMenuItem(value: 'openai', child: Text('OpenAI')),
+                  DropdownMenuItem(value: 'groq', child: Text('Groq')),
                 ],
-                onChanged: (value) => setState(() => model = value!),
+                onChanged: (value) => setState(() => provider = value!),
               ),
+              const SizedBox(height: 14),
+              if (provider == 'groq') ...[
+                DropdownButtonFormField<String>(
+                  initialValue: groqModel,
+                  decoration: input('Groq tutor model'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'llama-3.3-70b-versatile',
+                      child: Text('Llama 3.3 70B Versatile'),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() => groqModel = value!),
+                ),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  initialValue: groqVisionModel,
+                  decoration: input('Groq picture scanner model'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'qwen/qwen3.6-27b',
+                      child: Text('Qwen 3.6 27B Vision'),
+                    ),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => groqVisionModel = value!),
+                ),
+              ] else
+                DropdownButtonFormField<String>(
+                  initialValue: model,
+                  decoration: input('OpenAI model'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'gpt-5.4-mini',
+                      child: Text('GPT-5.4 mini — economical tutor'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'gpt-5.4',
+                      child: Text('GPT-5.4 — higher capability'),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() => model = value!),
+                ),
               const SizedBox(height: 8),
               const Text(
-                'The OpenAI API key cannot be viewed or changed here. Set it only in Supabase Secrets.',
+                'Provider API keys cannot be viewed or changed here. Store them only in Supabase Secrets.',
                 style: TextStyle(
                   color: Colors.deepOrange,
                   fontWeight: FontWeight.w700,
@@ -1081,6 +1187,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 detail: health == null ? 'Status unavailable' : null,
               ),
               StatusTile(
+                'Groq secret configured',
+                health?['groqConfigured'] == true,
+                detail: health == null ? 'Status unavailable' : null,
+              ),
+              StatusTile(
                 'Rate-limit salt configured',
                 health?['rateLimitSaltConfigured'] == true,
                 detail: health == null ? 'Status unavailable' : null,
@@ -1102,9 +1213,9 @@ class _SettingsPageState extends State<SettingsPage> {
               const ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(Icons.admin_panel_settings_rounded),
-                title: Text('EmmaPrep Admin'),
+                title: Text('englishTutor'),
                 subtitle: Text(
-                  'Version 1.3.0 — Takunda Vito\ntakunda.vito.co.zw',
+                  'Version 1.4.0 — Takunda Vito\ntakunda.vito.co.zw',
                 ),
               ),
               const Text(
