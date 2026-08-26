@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:pdfx/pdfx.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const plum = Color(0xff2854c7),
@@ -12,7 +16,46 @@ const plum = Color(0xff2854c7),
     ink = Color(0xff211a20);
 const compiledApiBaseUrl = String.fromEnvironment('EMMAPREP_API_URL');
 const compiledAppToken = String.fromEnvironment('EMMAPREP_APP_TOKEN');
-void main() => runApp(const EmmaPrep());
+const compiledSupabaseUrl = String.fromEnvironment('EMMAPREP_SUPABASE_URL');
+const compiledSupabaseKey = String.fromEnvironment('EMMAPREP_SUPABASE_KEY');
+bool supabaseReady = false;
+
+Future<void> logStudentEvent(
+  String eventName, {
+  String level = 'info',
+  Map<String, dynamic> metadata = const {},
+}) async {
+  debugPrint('[EmmaPrep Student][$level] $eventName $metadata');
+  if (!supabaseReady) return;
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) return;
+  try {
+    await Supabase.instance.client.from('app_events').insert({
+      'actor_id': user.id,
+      'source': 'student_app',
+      'event_name': eventName,
+      'level': level,
+      'app_version': '1.5.0',
+      'metadata': metadata,
+    });
+  } catch (error) {
+    debugPrint(
+      '[EmmaPrep Student][warning] event_log_failed ${error.runtimeType}',
+    );
+  }
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (compiledSupabaseUrl.isNotEmpty && compiledSupabaseKey.isNotEmpty) {
+    await Supabase.initialize(
+      url: compiledSupabaseUrl,
+      publishableKey: compiledSupabaseKey,
+    );
+    supabaseReady = true;
+  }
+  runApp(const EmmaPrep());
+}
 
 class Lesson {
   final String id, paper, title, sub, intro;
@@ -834,6 +877,9 @@ class Store extends ChangeNotifier {
   final done = <String>{}, saved = <String>{};
   final remoteLessons = <Lesson>[];
   final remoteQuestions = <Question>[];
+  final personalLessons = <Lesson>[];
+  final personalQuestions = <Question>[];
+  final scannedBatches = <Map<String, dynamic>>[];
   int correct = 0, attempted = 0, streak = 0;
   bool darkMode = false,
       highContrast = false,
@@ -844,8 +890,16 @@ class Store extends ChangeNotifier {
   final String apiBaseUrl = compiledApiBaseUrl;
   final String apiToken = compiledAppToken;
   bool syncing = false;
-  List<Lesson> get allLessons => [...lessons, ...remoteLessons];
-  List<Question> get allQuestions => [...bank, ...remoteQuestions];
+  List<Lesson> get allLessons => [
+    ...lessons,
+    ...remoteLessons,
+    ...personalLessons,
+  ];
+  List<Question> get allQuestions => [
+    ...bank,
+    ...remoteQuestions,
+    ...personalQuestions,
+  ];
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     // Remove configuration saved by early builds; production values now come
@@ -866,6 +920,7 @@ class Store extends ChangeNotifier {
     simpleLanguage = p.getBool('simpleLanguage') ?? true;
     textScale = p.getDouble('textScale') ?? 1.0;
     _decodeContent(p.getString('remoteContent'));
+    _decodeScanned(p.getString('scannedBatches'));
     notifyListeners();
     if (apiBaseUrl.isNotEmpty) {
       unawaited(syncContent(silent: true));
@@ -887,6 +942,7 @@ class Store extends ChangeNotifier {
     await p.setBool('reducedMotion', reducedMotion);
     await p.setBool('simpleLanguage', simpleLanguage);
     await p.setDouble('textScale', textScale);
+    await p.setString('scannedBatches', jsonEncode(scannedBatches));
   }
 
   void study() {
@@ -905,6 +961,7 @@ class Store extends ChangeNotifier {
     study();
     save();
     notifyListeners();
+    unawaited(logStudentEvent('lesson_progress_changed'));
   }
 
   void bookmark(String id) {
@@ -919,6 +976,7 @@ class Store extends ChangeNotifier {
     study();
     save();
     notifyListeners();
+    unawaited(logStudentEvent('practice_answered', metadata: {'correct': ok}));
   }
 
   void updateAccessibility({
@@ -940,9 +998,149 @@ class Store extends ChangeNotifier {
   Map<String, String> get apiHeaders => {
     'Content-Type': 'application/json',
     if (apiToken.startsWith('sb_publishable_')) 'apikey': apiToken,
+    if (supabaseReady && Supabase.instance.client.auth.currentSession != null)
+      'Authorization':
+          'Bearer ${Supabase.instance.client.auth.currentSession!.accessToken}',
     if (apiToken.isNotEmpty && !apiToken.startsWith('sb_publishable_'))
       'Authorization': 'Bearer $apiToken',
   };
+
+  void _decodeScanned(String? raw) {
+    if (raw == null || raw.isEmpty) return;
+    try {
+      scannedBatches
+        ..clear()
+        ..addAll(
+          List<Map<String, dynamic>>.from(
+            (jsonDecode(raw) as List).map(
+              (item) => Map<String, dynamic>.from(item),
+            ),
+          ),
+        );
+      personalLessons.clear();
+      personalQuestions.clear();
+      for (final batch in scannedBatches) {
+        final id = batch['id'].toString();
+        final items = List<Map<String, dynamic>>.from(
+          (batch['questions'] as List).map(
+            (item) => Map<String, dynamic>.from(item),
+          ),
+        );
+        if (items.isEmpty) continue;
+        final paper = items.first['paper'] == 'Paper 2' ? 'Paper 2' : 'Paper 1';
+        personalLessons.add(
+          Lesson(
+            'scan-$id',
+            paper,
+            'My scanned questions',
+            '${items.length} solved questions',
+            'Questions captured from your revision material and explained in simple language.',
+            Icons.document_scanner_rounded,
+            paper == 'Paper 2' ? const Color(0xff5679b6) : coral,
+            items
+                .map(
+                  (item) =>
+                      '${(item['passage']?.toString().isNotEmpty ?? false) ? 'Passage:\n${item['passage']}\n\n' : ''}${item['question']}\nAnswer: ${item['answers'][item['correctIndex']]}\n${item['studyNote']}',
+                )
+                .toList(),
+            const [
+              'Read the explanation',
+              'Try again without looking',
+              'Explain the answer aloud',
+            ],
+          ),
+        );
+        personalQuestions.addAll(
+          items.map(
+            (item) => Question.fromJson({...item, 'examStyle': 'zimsec-4005'}),
+          ),
+        );
+      }
+    } catch (_) {
+      scannedBatches.clear();
+      personalLessons.clear();
+      personalQuestions.clear();
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> scanQuestions(List<XFile> images) async {
+    if (apiBaseUrl.isEmpty) {
+      throw const FormatException('The scanner API is not configured.');
+    }
+    final encoded = <String>[];
+    unawaited(
+      logStudentEvent(
+        'question_scan_started',
+        metadata: {'imageCount': images.take(3).length},
+      ),
+    );
+    for (final image in images.take(3)) {
+      final bytes = await image.readAsBytes();
+      encoded.add('data:image/jpeg;base64,${base64Encode(bytes)}');
+    }
+    debugPrint(
+      '[EmmaPrep Student][info] question_scan_upload_started {imageCount: ${encoded.length}}',
+    );
+    final response = await http
+        .post(
+          Uri.parse('$apiBaseUrl/v1/scan-questions'),
+          headers: apiHeaders,
+          body: jsonEncode({'images': encoded}),
+        )
+        .timeout(const Duration(seconds: 90));
+    debugPrint(
+      '[EmmaPrep Student][info] question_scan_http_completed {status: ${response.statusCode}}',
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      unawaited(
+        logStudentEvent(
+          'question_scan_failed',
+          level: 'error',
+          metadata: {'status': response.statusCode},
+        ),
+      );
+      throw FormatException(
+        '${data['error']?.toString() ?? 'Question scan failed.'}${data['requestId'] == null ? '' : ' (request ${data['requestId']})'}',
+      );
+    }
+    final items = List<Map<String, dynamic>>.from(
+      (data['questions'] as List? ?? []).map(
+        (item) => Map<String, dynamic>.from(item),
+      ),
+    );
+    for (final item in items) {
+      item['passage'] = item['passage']?.toString().trim() ?? '';
+      Question.fromJson({...item, 'examStyle': 'zimsec-4005'});
+    }
+    unawaited(
+      logStudentEvent(
+        'question_scan_succeeded',
+        metadata: {
+          'imageCount': images.take(3).length,
+          'questionCount': items.length,
+        },
+      ),
+    );
+    return items;
+  }
+
+  Future<void> saveScannedQuestions(List<Map<String, dynamic>> items) async {
+    if (items.isEmpty) return;
+    scannedBatches.add({
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'questions': items,
+    });
+    _decodeScanned(jsonEncode(scannedBatches));
+    await save();
+    notifyListeners();
+    unawaited(
+      logStudentEvent(
+        'scanned_questions_saved',
+        metadata: {'questionCount': items.length},
+      ),
+    );
+  }
 
   bool _decodeContent(String? raw) {
     if (raw == null || raw.isEmpty) return false;
@@ -1035,7 +1233,239 @@ class EmmaPrep extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       ),
     ),
-    home: const Shell(),
+    home: supabaseReady ? const StudentAuthGate() : const Shell(),
+  );
+}
+
+class StudentAuthGate extends StatefulWidget {
+  const StudentAuthGate({super.key});
+  @override
+  State<StudentAuthGate> createState() => _StudentAuthGateState();
+}
+
+class _StudentAuthGateState extends State<StudentAuthGate> {
+  bool registrationEnabled = false;
+  @override
+  void initState() {
+    super.initState();
+    loadPolicy();
+  }
+
+  Future<void> loadPolicy() async {
+    try {
+      final row = await Supabase.instance.client
+          .from('app_config')
+          .select('value')
+          .eq('key', 'registration_enabled')
+          .maybeSingle();
+      if (mounted) setState(() => registrationEnabled = row?['value'] == true);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<AuthState>(
+    stream: Supabase.instance.client.auth.onAuthStateChange,
+    builder: (_, _) => Supabase.instance.client.auth.currentSession == null
+        ? StudentLoginPage(registrationEnabled: registrationEnabled)
+        : const Shell(),
+  );
+}
+
+class StudentLoginPage extends StatefulWidget {
+  final bool registrationEnabled;
+  const StudentLoginPage({required this.registrationEnabled, super.key});
+  @override
+  State<StudentLoginPage> createState() => _StudentLoginPageState();
+}
+
+class _StudentLoginPageState extends State<StudentLoginPage> {
+  final name = TextEditingController(text: 'Emmaculate');
+  final email = TextEditingController();
+  final password = TextEditingController();
+  bool create = false, busy = false, hidePassword = true;
+  String? message;
+
+  Future<void> submit() async {
+    if (email.text.trim().isEmpty || password.text.length < 8) {
+      setState(
+        () => message =
+            'Enter a valid email and a password of at least 8 characters.',
+      );
+      return;
+    }
+    setState(() {
+      busy = true;
+      message = null;
+    });
+    try {
+      if (create && widget.registrationEnabled) {
+        final result = await Supabase.instance.client.auth.signUp(
+          email: email.text.trim(),
+          password: password.text,
+          data: {'display_name': name.text.trim()},
+        );
+        if (result.session == null) {
+          message =
+              'Account created. Check your email to confirm it, then sign in.';
+        }
+      } else {
+        await Supabase.instance.client.auth.signInWithPassword(
+          email: email.text.trim(),
+          password: password.text,
+        );
+        unawaited(logStudentEvent('student_signed_in'));
+      }
+    } on AuthException catch (error) {
+      message = error.message;
+      debugPrint(
+        '[EmmaPrep Student][warning] sign_in_failed ${error.statusCode ?? 'auth_error'}',
+      );
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> resetPassword() async {
+    if (!email.text.contains('@')) {
+      setState(() => message = 'Enter your email address first.');
+      return;
+    }
+    try {
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        email.text.trim(),
+      );
+      setState(
+        () => message = 'Password reset instructions were sent to your email.',
+      );
+    } on AuthException catch (error) {
+      setState(() => message = error.message);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(26),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const EnglishTutorMark(size: 88),
+                    const SizedBox(height: 14),
+                    Text(
+                      create
+                          ? 'Create your EmmaPrep account'
+                          : 'Welcome to EmmaPrep',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 25,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      create
+                          ? 'Your progress and learning space begin here.'
+                          : 'Sign in with the credentials Takunda created for you.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 22),
+                    if (create) ...[
+                      TextField(
+                        controller: name,
+                        decoration: const InputDecoration(
+                          labelText: 'Name',
+                          prefixIcon: Icon(Icons.person_rounded),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 13),
+                    ],
+                    TextField(
+                      controller: email,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: Icon(Icons.email_rounded),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 13),
+                    TextField(
+                      controller: password,
+                      obscureText: hidePassword,
+                      onSubmitted: (_) => submit(),
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: const Icon(Icons.lock_rounded),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          onPressed: () =>
+                              setState(() => hidePassword = !hidePassword),
+                          icon: Icon(
+                            hidePassword
+                                ? Icons.visibility_rounded
+                                : Icons.visibility_off_rounded,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (message != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(
+                          message!,
+                          style: const TextStyle(
+                            color: coral,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 17),
+                    FilledButton.icon(
+                      onPressed: busy ? null : submit,
+                      icon: Icon(
+                        create ? Icons.person_add_rounded : Icons.login_rounded,
+                      ),
+                      label: Text(
+                        busy
+                            ? 'Please wait…'
+                            : create
+                            ? 'Create account'
+                            : 'Sign in',
+                      ),
+                    ),
+                    if (!create)
+                      TextButton(
+                        onPressed: resetPassword,
+                        child: const Text('Forgot password?'),
+                      ),
+                    if (widget.registrationEnabled)
+                      TextButton(
+                        onPressed: () => setState(() {
+                          create = !create;
+                          message = null;
+                        }),
+                        child: Text(
+                          create
+                              ? 'I already have an account'
+                              : 'Create a new account',
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
   );
 }
 
@@ -1052,6 +1482,9 @@ class _ShellState extends State<Shell> {
   void initState() {
     super.initState();
     store.load();
+    if (supabaseReady && Supabase.instance.client.auth.currentUser != null) {
+      unawaited(logStudentEvent('student_app_session_started'));
+    }
   }
 
   @override
@@ -1171,6 +1604,22 @@ class OloidMark extends StatelessWidget {
           ),
         ),
       ),
+    ),
+  );
+}
+
+class EnglishTutorMark extends StatelessWidget {
+  final double size;
+  const EnglishTutorMark({this.size = 58, super.key});
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Image.asset(
+      'assets/branding/english_tutor_icon.png',
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
     ),
   );
 }
@@ -1508,7 +1957,7 @@ class AccessibilityPage extends StatelessWidget {
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            Text('Version 1.2.0 (build 3)'),
+                            Text('Version 1.5.0 (build 6)'),
                           ],
                         ),
                       ),
@@ -1547,6 +1996,28 @@ class AccessibilityPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
+          if (supabaseReady &&
+              Supabase.instance.client.auth.currentUser != null) ...[
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.account_circle_rounded),
+                title: const Text('Signed-in student'),
+                subtitle: Text(
+                  Supabase.instance.client.auth.currentUser!.email ??
+                      'EmmaPrep account',
+                ),
+                trailing: TextButton.icon(
+                  onPressed: () async {
+                    await Supabase.instance.client.auth.signOut();
+                    if (c.mounted) Navigator.pop(c);
+                  },
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('Sign out'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+          ],
           FilledButton.icon(
             icon: const Icon(Icons.save_rounded),
             label: const Text('Save settings'),
@@ -2129,6 +2600,16 @@ class Practice extends StatelessWidget {
         const Text('Only Paper 1 and Paper 2 exam-skill questions.'),
         const SizedBox(height: 22),
         Drill(
+          'Scan questions',
+          'Photograph one or several questions, get explanations, then add them to Study and Practice.',
+          Icons.document_scanner_rounded,
+          plum,
+          () => Navigator.push(
+            c,
+            MaterialPageRoute(builder: (_) => QuestionScannerPage(s)),
+          ),
+        ),
+        Drill(
           'Mixed exam check',
           'Five ZIMSEC 4005 skill questions.',
           Icons.bolt,
@@ -2156,6 +2637,264 @@ class Practice extends StatelessWidget {
     c,
     MaterialPageRoute(
       builder: (_) => Quiz(s, paper: p, count: n),
+    ),
+  );
+}
+
+class QuestionScannerPage extends StatefulWidget {
+  final Store store;
+  const QuestionScannerPage(this.store, {super.key});
+  @override
+  State<QuestionScannerPage> createState() => _QuestionScannerPageState();
+}
+
+class _QuestionScannerPageState extends State<QuestionScannerPage> {
+  final picker = ImagePicker();
+  final images = <XFile>[];
+  List<Map<String, dynamic>> results = [];
+  bool busy = false;
+  String? error;
+
+  Future<void> addCamera() async {
+    final image = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 72,
+      maxWidth: 1600,
+    );
+    if (image != null && mounted) {
+      setState(() {
+        if (images.length < 3) {
+          images.add(image);
+        }
+      });
+    }
+  }
+
+  Future<void> addGallery() async {
+    final picked = await picker.pickMultiImage(
+      imageQuality: 72,
+      maxWidth: 1600,
+      limit: 3,
+    );
+    if (mounted) {
+      setState(() {
+        images
+          ..clear()
+          ..addAll(picked.take(3));
+      });
+    }
+  }
+
+  Future<void> scan() async {
+    if (images.isEmpty) {
+      setState(() => error = 'Capture or select at least one clear picture.');
+      return;
+    }
+    setState(() {
+      busy = true;
+      error = null;
+      results = [];
+    });
+    try {
+      final found = await widget.store.scanQuestions(images);
+      if (mounted) {
+        setState(() {
+          results = found;
+          if (found.isEmpty) {
+            error = 'No clear ZIMSEC English questions were found.';
+          }
+        });
+      }
+    } catch (caught) {
+      debugPrint(
+        '[EmmaPrep Student][error] question_scan_request_failed ${caught.runtimeType}',
+      );
+      if (mounted) {
+        setState(
+          () => error = caught is FormatException
+              ? caught.message.toString()
+              : 'Could not scan the pictures. Check the connection and try again.',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => busy = false);
+      }
+    }
+  }
+
+  Future<void> save() async {
+    await widget.store.saveScannedQuestions(results);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Added to Study and Practice.')),
+    );
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Scan revision questions')),
+    body: ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [plum, coral]),
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: const Text(
+            'Take clear, straight pictures with all question numbers and answer choices visible. You may use up to three pictures in one scan.',
+            style: TextStyle(
+              color: Colors.white,
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: busy ? null : addCamera,
+                icon: const Icon(Icons.camera_alt_rounded),
+                label: const Text('Camera'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: busy ? null : addGallery,
+                icon: const Icon(Icons.photo_library_rounded),
+                label: const Text('Gallery'),
+              ),
+            ),
+          ],
+        ),
+        if (images.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.collections_rounded, color: plum),
+              title: Text(
+                '${images.length} picture${images.length == 1 ? '' : 's'} ready',
+              ),
+              subtitle: const Text(
+                'Images are sent for analysis but are not saved in your study history.',
+              ),
+              trailing: IconButton(
+                onPressed: busy ? null : () => setState(images.clear),
+                icon: const Icon(Icons.clear_rounded),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: busy ? null : scan,
+            icon: busy
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.auto_awesome_rounded),
+            label: Text(
+              busy ? 'Reading questions…' : 'Read and answer questions',
+            ),
+          ),
+        ],
+        if (error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: Text(
+              error!,
+              style: const TextStyle(color: coral, fontWeight: FontWeight.w700),
+            ),
+          ),
+        if (results.isNotEmpty) ...[
+          const SizedBox(height: 22),
+          Text(
+            '${results.length} question${results.length == 1 ? '' : 's'} found',
+            style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          ...results.asMap().entries.map((entry) {
+            final item = entry.value;
+            final answers = List<String>.from(item['answers']);
+            final correct = (item['correctIndex'] as num).toInt();
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(17),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${item['paper']} · Question ${entry.key + 1}',
+                      style: const TextStyle(
+                        color: plum,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    if ((item['passage']?.toString().isNotEmpty ?? false)) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: plum.withValues(alpha: .07),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          item['passage'].toString(),
+                          style: const TextStyle(height: 1.45),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    Text(
+                      item['question'].toString(),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    Text(
+                      'Answer: ${answers[correct]}',
+                      style: const TextStyle(
+                        color: Color(0xff32765a),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      item['explanation'].toString(),
+                      style: const TextStyle(height: 1.4),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      'Study note: ${item['studyNote']}',
+                      style: const TextStyle(fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+          const SizedBox(height: 14),
+          FilledButton.icon(
+            onPressed: save,
+            icon: const Icon(Icons.library_add_check_rounded),
+            label: const Text('Add all to Study and Practice'),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Always compare the captured wording with the original picture. Image recognition and AI answers can make mistakes.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, height: 1.4),
+          ),
+        ],
+      ],
     ),
   );
 }
@@ -2410,6 +3149,8 @@ class CoachPage extends StatefulWidget {
 class _CoachPageState extends State<CoachPage> {
   final input = TextEditingController();
   final scroll = ScrollController();
+  final picker = ImagePicker();
+  final attachments = <XFile>[];
   final messages = <ChatMessage>[
     const ChatMessage(
       false,
@@ -2418,8 +3159,99 @@ class _CoachPageState extends State<CoachPage> {
   ];
   bool sending = false;
 
+  Future<void> addCoachPictures({required bool camera}) async {
+    if (camera) {
+      final image = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 72,
+        maxWidth: 1600,
+      );
+      if (image != null && mounted) {
+        setState(() {
+          if (attachments.length < 3) attachments.add(image);
+        });
+      }
+      return;
+    }
+    final images = await picker.pickMultiImage(
+      imageQuality: 72,
+      maxWidth: 1600,
+      limit: 3,
+    );
+    if (mounted) {
+      setState(() {
+        attachments
+          ..clear()
+          ..addAll(images.take(3));
+      });
+    }
+  }
+
+  Future<void> addCoachPdf() async {
+    try {
+      final selection = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['pdf'],
+        withData: true,
+      );
+      final bytes = selection?.files.single.bytes;
+      if (bytes == null) return;
+      final document = await PdfDocument.openData(bytes);
+      final pages = <XFile>[];
+      try {
+        for (var number = 1; number <= min(3, document.pagesCount); number++) {
+          final page = await document.getPage(number);
+          try {
+            final width = min(1600.0, page.width * 2);
+            final rendered = await page.render(
+              width: width,
+              height: width * page.height / page.width,
+              format: PdfPageImageFormat.jpeg,
+              backgroundColor: '#FFFFFF',
+              quality: 76,
+            );
+            if (rendered != null) {
+              pages.add(
+                XFile.fromData(
+                  rendered.bytes,
+                  name: 'pdf-page-$number.jpg',
+                  mimeType: 'image/jpeg',
+                ),
+              );
+            }
+          } finally {
+            await page.close();
+          }
+        }
+      } finally {
+        await document.close();
+      }
+      if (mounted) {
+        setState(() {
+          attachments
+            ..clear()
+            ..addAll(pages);
+        });
+      }
+    } catch (caught) {
+      debugPrint(
+        '[EmmaPrep Student][error] coach_pdf_failed ${caught.runtimeType}',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not read that PDF. Try clear page pictures.'),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> send([String? prompt]) async {
-    final text = (prompt ?? input.text).trim();
+    final typed = (prompt ?? input.text).trim();
+    final text = typed.isEmpty && attachments.isNotEmpty
+        ? 'Read these pages, explain the passage and answer every visible ZIMSEC English question.'
+        : typed;
     if (text.isEmpty || sending) return;
     if (widget.s.apiBaseUrl.isEmpty) {
       setState(
@@ -2438,6 +3270,12 @@ class _CoachPageState extends State<CoachPage> {
       input.clear();
     });
     try {
+      final encodedAttachments = <String>[];
+      for (final attachment in attachments) {
+        encodedAttachments.add(
+          'data:image/jpeg;base64,${base64Encode(await attachment.readAsBytes())}',
+        );
+      }
       final response = await http
           .post(
             Uri.parse('${widget.s.apiBaseUrl}/v1/chat'),
@@ -2450,6 +3288,7 @@ class _CoachPageState extends State<CoachPage> {
               'locale': 'Zimbabwe',
               'teaching_style':
                   'Use simple English, Zimbabwean everyday examples, one worked example, then one short practice task.',
+              'images': encodedAttachments,
               'history': messages
                   .take(max(0, messages.length - 8))
                   .map(
@@ -2463,21 +3302,46 @@ class _CoachPageState extends State<CoachPage> {
           )
           .timeout(const Duration(seconds: 40));
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw Exception(response.statusCode);
+        final failure = jsonDecode(response.body) as Map<String, dynamic>;
+        throw FormatException(
+          '${failure['error'] ?? 'Tutor request failed'}${failure['requestId'] == null ? '' : ' (request ${failure['requestId']})'}',
+        );
       }
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final reply =
           data['reply']?.toString() ??
           data['message']?.toString() ??
           'The coach returned an empty response.';
-      if (mounted) setState(() => messages.add(ChatMessage(false, reply)));
-    } catch (_) {
+      if (mounted) {
+        setState(() {
+          messages.add(ChatMessage(false, reply));
+          attachments.clear();
+        });
+      }
+    } on TimeoutException {
+      debugPrint('[EmmaPrep Student][error] coach_request_timeout');
       if (mounted) {
         setState(
           () => messages.add(
             const ChatMessage(
               false,
-              'I could not reach the study service. Check your internet connection and try again. Your lessons and practice still work offline.',
+              'The tutor took too long to respond. Try once more. If this continues, ask the administrator to check the chat function and AI provider secret.',
+            ),
+          ),
+        );
+      }
+    } catch (caught) {
+      debugPrint(
+        '[EmmaPrep Student][error] coach_request_failed ${caught.runtimeType}',
+      );
+      if (mounted) {
+        setState(
+          () => messages.add(
+            ChatMessage(
+              false,
+              caught is FormatException
+                  ? caught.message.toString()
+                  : 'I could not reach the study service. Check your internet connection and try again. Your lessons and practice still work offline.',
             ),
           ),
         );
@@ -2513,7 +3377,7 @@ class _CoachPageState extends State<CoachPage> {
                 ],
               ),
             ),
-            const OloidMark(size: 38),
+            const EnglishTutorMark(size: 48),
           ],
         ),
         const SizedBox(height: 10),
@@ -2546,6 +3410,19 @@ class _CoachPageState extends State<CoachPage> {
           ),
         ),
         const SizedBox(height: 10),
+        if (attachments.isNotEmpty) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Chip(
+              avatar: const Icon(Icons.attach_file_rounded, size: 18),
+              label: Text(
+                '${attachments.length} page${attachments.length == 1 ? '' : 's'} attached',
+              ),
+              onDeleted: sending ? null : () => setState(attachments.clear),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         Expanded(
           child: ListView.builder(
             controller: scroll,
@@ -2592,6 +3469,26 @@ class _CoachPageState extends State<CoachPage> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            PopupMenuButton<String>(
+              enabled: !sending,
+              tooltip: 'Attach pages',
+              icon: const Icon(Icons.add_circle_outline_rounded),
+              onSelected: (value) {
+                if (value == 'camera') {
+                  addCoachPictures(camera: true);
+                } else if (value == 'gallery') {
+                  addCoachPictures(camera: false);
+                } else {
+                  addCoachPdf();
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'camera', child: Text('Take a picture')),
+                PopupMenuItem(value: 'gallery', child: Text('Choose pictures')),
+                PopupMenuItem(value: 'pdf', child: Text('Choose a PDF')),
+              ],
+            ),
+            const SizedBox(width: 4),
             Expanded(
               child: TextField(
                 controller: input,

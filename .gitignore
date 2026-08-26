@@ -36,6 +36,9 @@ config.production.json
 .pub-cache/
 .pub/
 /build/
+/.gradle-user/
+/node_modules/
+/supabase/.temp/
 /coverage/
 /docs/verification/latest.json
 

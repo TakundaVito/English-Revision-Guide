@@ -916,7 +916,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final cacheSeconds = TextEditingController();
   String model = 'gpt-5.4-mini';
   String provider = 'openai';
-  String groqModel = 'llama-3.3-70b-versatile';
+  String groqModel = 'openai/gpt-oss-20b';
   String groqVisionModel = 'qwen/qwen3.6-27b';
   bool aiEnabled = true,
       registrationEnabled = false,
@@ -951,7 +951,10 @@ class _SettingsPageState extends State<SettingsPage> {
       provider = values['ai_provider']?.toString() == 'groq'
           ? 'groq'
           : 'openai';
-      groqModel = values['groq_model']?.toString() ?? 'llama-3.3-70b-versatile';
+      final storedGroqModel = values['groq_model']?.toString();
+      groqModel = storedGroqModel == 'openai/gpt-oss-120b'
+          ? storedGroqModel!
+          : 'openai/gpt-oss-20b';
       groqVisionModel =
           values['groq_vision_model']?.toString() ?? 'qwen/qwen3.6-27b';
       aiEnabled = values['ai_enabled'] as bool? ?? true;
@@ -1080,8 +1083,12 @@ class _SettingsPageState extends State<SettingsPage> {
                   decoration: input('Groq tutor model'),
                   items: const [
                     DropdownMenuItem(
-                      value: 'llama-3.3-70b-versatile',
-                      child: Text('Llama 3.3 70B Versatile'),
+                      value: 'openai/gpt-oss-20b',
+                      child: Text('GPT-OSS 20B — economical tutor'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'openai/gpt-oss-120b',
+                      child: Text('GPT-OSS 120B — higher capability'),
                     ),
                   ],
                   onChanged: (value) => setState(() => groqModel = value!),
@@ -1190,6 +1197,13 @@ class _SettingsPageState extends State<SettingsPage> {
                 'Groq secret configured',
                 health?['groqConfigured'] == true,
                 detail: health == null ? 'Status unavailable' : null,
+              ),
+              StatusTile(
+                'Selected provider accepts its key',
+                health?['selectedProviderReachable'] == true,
+                detail: health == null
+                    ? 'Status unavailable'
+                    : '${health?['selectedProvider'] ?? 'Unknown'} · HTTP ${health?['selectedProviderStatus'] ?? 'not tested'}',
               ),
               StatusTile(
                 'Rate-limit salt configured',

@@ -68,7 +68,7 @@ try {
     }
     $results.Add([ordered]@{ name = "clean-tree"; command = "git status --porcelain"; exitCode = 0; status = if ($status) { "conditional" } else { "pass" } })
 
-    $trackedSensitive = @(& $gitCommand ls-files -- "config.production.json" ".env" ".env.*" "*.jks" "*.keystore")
+    $trackedSensitive = @(& $gitCommand ls-files -- "config.production.json" "admin/config.local.json" ".env" ".env.*" "*.jks" "*.keystore")
     if ($LASTEXITCODE -ne 0) { throw "Unable to inspect tracked sensitive files" }
     if ($trackedSensitive.Count -gt 0) {
         throw "Sensitive files are tracked: $($trackedSensitive -join ', ')"
@@ -115,6 +115,17 @@ try {
     Invoke-VI26Command -Name "format" -Executable $dartCommand -Arguments @("format", "--output=none", "--set-exit-if-changed", "lib", "test")
     Invoke-VI26Command -Name "analyze" -Executable $flutterCommand -Arguments @("analyze", "--fatal-infos")
     Invoke-VI26Command -Name "tests" -Executable $flutterCommand -Arguments @("test", "--reporter", "expanded")
+
+    Push-Location -LiteralPath "admin"
+    try {
+        Invoke-VI26Command -Name "admin-locked-dependencies" -Executable $flutterCommand -Arguments @("pub", "get")
+        Invoke-VI26Command -Name "admin-format" -Executable $dartCommand -Arguments @("format", "--output=none", "--set-exit-if-changed", "lib", "test")
+        Invoke-VI26Command -Name "admin-analyze" -Executable $flutterCommand -Arguments @("analyze", "--fatal-infos")
+        Invoke-VI26Command -Name "admin-tests" -Executable $flutterCommand -Arguments @("test", "--reporter", "expanded")
+        Invoke-VI26Command -Name "admin-web-build" -Executable $flutterCommand -Arguments @("build", "web")
+    } finally {
+        Pop-Location
+    }
 
     if (-not $SkipApk) {
         $buildArguments = @("build", "apk", "--release", "--split-per-abi")

@@ -83,6 +83,22 @@ Response:
 
 The app requests this endpoint automatically during launch. An `ETag` response header is recommended; later requests include `If-None-Match`, allowing the server to return `304 Not Modified`. Users do not configure or manually trigger the pipeline.
 
+The response may also include an `appConfig` object containing safe public controls such as `minimum_version`, `maintenance_notice` and `content_cache_seconds`. Unknown fields are ignored by older app releases.
+
+## Administrator health
+
+`POST /health` is called only by the separate authenticated admin dashboard. It reports whether the content release, AI provider secret and rate-limit salt are configured. It never returns credential values. Draft editing and safe API settings use Supabase Auth plus Row Level Security directly.
+
+## Student identity and question images
+
+`POST /admin-create-student` requires an authenticated administrator and creates a confirmed student account without exposing the service role to either Flutter app.
+
+`POST /scan-questions` requires a signed-in student JWT. It accepts up to three compressed base64 image values and returns at most twenty Paper 1/Paper 2 items with four choices, the correct index, an explanation and a study note. The app validates and previews results before saving them locally.
+
+## Operational events
+
+Authenticated clients may insert privacy-safe events into `app_events`; RLS binds `actor_id` to the signed-in user and restricts reads to administrators. Metadata must never contain credentials, tokens, emails, images, question text, answers or chat content. Edge Functions emit structured console events with request IDs for correlation in Supabase Logs.
+
 Synced content is validated, cached locally and remains available offline. A subsequent successful sync atomically replaces previous remote content while preserving bundled content and learning progress. Payloads with another schema/curriculum, malformed questions, or questions without `examStyle: zimsec-4005` are rejected.
 
 Only original questions that reproduce typical **skills and structures** of ZIMSEC English Language 4005 may be published. Do not send generic trivia, unrelated English exercises, invented examination rules or copied copyrighted past-paper passages.

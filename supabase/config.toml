@@ -4,5 +4,13 @@ project_id = "hobzfmqnnztjyrtjspol"
 verify_jwt = false
 
 [functions.chat]
-verify_jwt = false
+verify_jwt = true
 
+[functions.health]
+verify_jwt = true
+
+[functions.admin-create-student]
+verify_jwt = true
+
+[functions.scan-questions]
+verify_jwt = true

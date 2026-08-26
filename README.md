@@ -2,7 +2,7 @@
 
 EmmaPrep English is a personalised Flutter revision app for Emmaculate, covering ZIMSEC English Language Paper 1 and Paper 2. Lessons, quizzes, progress and accessibility features work offline. The optional AI coach and content synchronization use a separately operated backend.
 
-Current version: **1.2.0+3**
+Current version: **1.5.0+6**
 
 ## Core capabilities
 
@@ -44,7 +44,9 @@ flutter build apk --release --split-per-abi --dart-define-from-file=config.produ
 
 ## Remote administration
 
-Supabase schema, Row Level Security policies and Edge Functions live under `supabase/`. The Flutter Web dashboard lives under `admin/`. Follow `docs/SUPABASE-SETUP.md` to install the migration, create the first administrator, deploy the API and run the dashboard.
+Supabase schema, Row Level Security policies and Edge Functions live under `supabase/`. The Flutter Web dashboard lives under `admin/` and is branded as **englishTutor**. Follow `docs/SUPABASE-SETUP.md` to install the migrations, create the first administrator, deploy the API and run the dashboard.
+
+The AI provider is selected remotely in englishTutor. API keys are never bundled into either Flutter app: store `OPENAI_API_KEY` or `GROQ_API_KEY` only in Supabase Edge Function Secrets. Apply migrations `202608260004_privacy_safe_events.sql` and `202608260005_ai_provider.sql`, then redeploy `admin-create-student`, `chat`, `scan-questions`, `health`, and `content`.
 
 Identify a connected phone architecture with:
 
