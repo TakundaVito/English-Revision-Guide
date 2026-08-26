@@ -1389,6 +1389,13 @@ class AccessibilityPage extends StatelessWidget {
   final Store s;
   const AccessibilityPage(this.s, {super.key});
 
+  Future<void> openDeveloperSite() async {
+    await launchUrl(
+      Uri.parse('https://takunda.vito.co.zw'),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
   @override
   Widget build(BuildContext c) => Scaffold(
     appBar: AppBar(title: const Text('Accessibility & appearance')),
@@ -1476,6 +1483,78 @@ class AccessibilityPage extends StatelessWidget {
               'This is how your reading text will look.',
               style: TextStyle(fontSize: 16 * s.textScale),
             ),
+          ),
+          const SizedBox(height: 24),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      OloidMark(size: 36),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'About EmmaPrep English',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            Text('Version 1.2.0 (build 3)'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 28),
+                  const ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.person_rounded),
+                    title: Text('Developer'),
+                    subtitle: Text('Takunda Vito'),
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.language_rounded),
+                    title: const Text('Developer website'),
+                    subtitle: const Text('takunda.vito.co.zw'),
+                    trailing: const Icon(Icons.open_in_new_rounded, size: 20),
+                    onTap: openDeveloperSite,
+                  ),
+                  const ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.school_rounded),
+                    title: Text('Learning focus'),
+                    subtitle: Text(
+                      'ZIMSEC English Language 4005 Paper 1 and Paper 2 revision',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'EmmaPrep English is an independent revision aid and is not an official ZIMSEC product.',
+                    style: TextStyle(fontSize: 12, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            icon: const Icon(Icons.save_rounded),
+            label: const Text('Save settings'),
+            onPressed: () async {
+              await s.save();
+              if (!c.mounted) return;
+              ScaffoldMessenger.of(
+                c,
+              ).showSnackBar(const SnackBar(content: Text('Settings saved.')));
+            },
           ),
         ],
       ),

@@ -9,6 +9,7 @@ All notable changes to EmmaPrep English are recorded here. Versions follow `majo
 - Automatic launch-time API content pipeline with ETag/304 support and offline caching.
 - Strict remote-content validation for the `zimsec-4005` curriculum and exam style.
 - Home settings gear and clearer ZIMSEC 4005 practice labelling.
+- Explicit settings save confirmation and an About section with developer metadata.
 
 ### Changed
 
