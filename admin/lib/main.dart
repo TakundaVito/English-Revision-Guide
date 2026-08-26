@@ -196,6 +196,10 @@ class _AdminHomeState extends State<AdminHome> {
               icon: Icon(Icons.publish_rounded),
               label: Text('Releases'),
             ),
+            NavigationRailDestination(
+              icon: Icon(Icons.settings_rounded),
+              label: Text('Settings'),
+            ),
           ],
         ),
         const VerticalDivider(width: 1),
@@ -211,7 +215,8 @@ class _AdminHomeState extends State<AdminHome> {
               revision: revision,
               changed: refresh,
             ),
-            _ => ReleasesPage(revision: revision, changed: refresh),
+            2 => ReleasesPage(revision: revision, changed: refresh),
+            _ => SettingsPage(revision: revision, changed: refresh),
           },
         ),
       ],
@@ -555,6 +560,257 @@ class ReleasesPage extends StatelessWidget {
                 ),
         ),
       );
+}
+
+class SettingsPage extends StatefulWidget {
+  final int revision;
+  final VoidCallback changed;
+  const SettingsPage({
+    required this.revision,
+    required this.changed,
+    super.key,
+  });
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  final minimumVersion = TextEditingController();
+  final maintenanceNotice = TextEditingController();
+  final cacheSeconds = TextEditingController();
+  String model = 'gpt-5.4-mini';
+  bool aiEnabled = true, loading = true, saving = false;
+  Map<String, dynamic>? health;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+    try {
+      final rows = List<Map<String, dynamic>>.from(
+        await Supabase.instance.client.from('app_config').select(),
+      );
+      final values = {
+        for (final row in rows) row['key'].toString(): row['value'],
+      };
+      minimumVersion.text = values['minimum_version']?.toString() ?? '1.3.0';
+      maintenanceNotice.text = values['maintenance_notice']?.toString() ?? '';
+      cacheSeconds.text = values['content_cache_seconds']?.toString() ?? '300';
+      model = values['ai_model']?.toString() ?? 'gpt-5.4-mini';
+      aiEnabled = values['ai_enabled'] as bool? ?? true;
+      try {
+        final response = await Supabase.instance.client.functions.invoke(
+          'health',
+        );
+        health = Map<String, dynamic>.from(response.data as Map);
+      } catch (_) {
+        health = null;
+      }
+    } catch (caught) {
+      error = '$caught';
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> save() async {
+    final cache = int.tryParse(cacheSeconds.text.trim());
+    if (cache == null || cache < 60 || cache > 3600) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cache time must be between 60 and 3600 seconds.'),
+        ),
+      );
+      return;
+    }
+    setState(() => saving = true);
+    try {
+      final userId = Supabase.instance.client.auth.currentUser!.id;
+      await Supabase.instance.client.from('app_config').upsert([
+        {'key': 'ai_enabled', 'value': aiEnabled, 'updated_by': userId},
+        {'key': 'ai_model', 'value': model, 'updated_by': userId},
+        {'key': 'content_cache_seconds', 'value': cache, 'updated_by': userId},
+        {
+          'key': 'maintenance_notice',
+          'value': maintenanceNotice.text.trim(),
+          'updated_by': userId,
+        },
+        {
+          'key': 'minimum_version',
+          'value': minimumVersion.text.trim(),
+          'updated_by': userId,
+        },
+      ]);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Remote settings saved.')));
+      widget.changed();
+    } catch (caught) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Save failed: $caught')));
+      }
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => PageFrame(
+    title: 'API & app settings',
+    subtitle:
+        'Manage safe remote controls. Provider secrets remain in Supabase Secrets.',
+    action: FilledButton.icon(
+      onPressed: saving ? null : save,
+      icon: const Icon(Icons.save_rounded),
+      label: Text(saving ? 'Saving…' : 'Save settings'),
+    ),
+    child: loading
+        ? const Center(child: CircularProgressIndicator())
+        : error != null
+        ? ErrorText(error)
+        : ListView(
+            children: [
+              const Text(
+                'AI coach',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                secondary: const Icon(Icons.smart_toy_rounded),
+                title: const Text('AI coach enabled'),
+                subtitle: const Text(
+                  'Disable chat remotely without publishing another APK.',
+                ),
+                value: aiEnabled,
+                onChanged: (value) => setState(() => aiEnabled = value),
+              ),
+              DropdownButtonFormField<String>(
+                initialValue: model,
+                decoration: input('OpenAI model'),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'gpt-5.4-mini',
+                    child: Text('GPT-5.4 mini — economical tutor'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'gpt-5.4',
+                    child: Text('GPT-5.4 — higher capability'),
+                  ),
+                ],
+                onChanged: (value) => setState(() => model = value!),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'The OpenAI API key cannot be viewed or changed here. Set it only in Supabase Secrets.',
+                style: TextStyle(
+                  color: Colors.deepOrange,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Divider(height: 38),
+              const Text(
+                'Mobile app controls',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 14),
+              Field(
+                minimumVersion,
+                'Minimum supported app version',
+                hint: '1.3.0',
+              ),
+              Field(
+                maintenanceNotice,
+                'Maintenance notice',
+                hint: 'Leave blank when the service is operating normally',
+                lines: 3,
+              ),
+              Field(cacheSeconds, 'Content cache time in seconds', hint: '300'),
+              const Divider(height: 38),
+              const Text(
+                'API status',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.cloud_rounded),
+                title: const Text('Supabase project'),
+                subtitle: const SelectableText(supabaseUrl),
+              ),
+              StatusTile(
+                'Admin health endpoint',
+                health?['ok'] == true,
+                detail: health == null
+                    ? 'Deploy the health function to enable status checks.'
+                    : 'Connected',
+              ),
+              StatusTile(
+                'OpenAI secret configured',
+                health?['openAiConfigured'] == true,
+                detail: health == null ? 'Status unavailable' : null,
+              ),
+              StatusTile(
+                'Rate-limit salt configured',
+                health?['rateLimitSaltConfigured'] == true,
+                detail: health == null ? 'Status unavailable' : null,
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.new_releases_rounded),
+                title: const Text('Published content release'),
+                subtitle: Text(
+                  health?['contentRelease']?['version']?.toString() ??
+                      'No active release reported',
+                ),
+              ),
+              const Divider(height: 38),
+              const Text(
+                'About',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+              ),
+              const ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.admin_panel_settings_rounded),
+                title: Text('EmmaPrep Admin'),
+                subtitle: Text(
+                  'Version 1.1.0 — Takunda Vito\ntakunda.vito.co.zw',
+                ),
+              ),
+              const Text(
+                'This dashboard manages EmmaPrep English content and safe remote configuration. It does not store provider secrets in browser code.',
+                style: TextStyle(height: 1.45),
+              ),
+            ],
+          ),
+  );
+}
+
+class StatusTile extends StatelessWidget {
+  final String label;
+  final bool good;
+  final String? detail;
+  const StatusTile(this.label, this.good, {this.detail, super.key});
+  @override
+  Widget build(BuildContext context) => ListTile(
+    contentPadding: EdgeInsets.zero,
+    leading: Icon(
+      good ? Icons.check_circle_rounded : Icons.warning_amber_rounded,
+      color: good ? Colors.green : Colors.orange,
+    ),
+    title: Text(label),
+    subtitle: detail == null ? null : Text(detail!),
+  );
 }
 
 class PageFrame extends StatelessWidget {
