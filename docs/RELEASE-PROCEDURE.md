@@ -57,7 +57,7 @@ powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1 -RequireProd
 Update `docs/VI26-COMPLIANCE.md` from recorded evidence. Merge only after review, then create an annotated tag:
 
 ```powershell
-git tag -a v1.1.0 -m "EmmaPrep English 1.1.0"
+git tag -a v1.2.0 -m "EmmaPrep English 1.2.0"
 ```
 
 Do not tag or claim VI26 compliance while any mandatory gate remains conditional or failed.

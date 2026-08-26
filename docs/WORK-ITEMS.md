@@ -1,6 +1,6 @@
 # EmmaPrep VI26 engineering work items
 
-Release target: `1.1.0+2`
+Release target: `1.2.0+3`
 
 | ID | Requirement | Acceptance criteria | Verification | State |
 | --- | --- | --- | --- | --- |
@@ -16,5 +16,6 @@ Release target: `1.1.0+2`
 | EMMA-VI26-010 | Release integrity | Every APK/AAB has recorded SHA-256, version, commit and build command | Generated verification evidence | Pending full release build |
 | EMMA-VI26-011 | Rollback readiness | Previous signed APK and user-data implications are documented and rollback is rehearsed | Release checklist | Pending |
 | EMMA-VI26-012 | Production signing | Release uses a private external keystore and verifier rejects missing production signing material when required | `-RequireProductionSigning`, certificate inspection | Implemented / private keystore evidence pending |
+| EMMA-VI26-013 | ZIMSEC-only question pipeline | Launch sync accepts only versioned `zimsec-4005` content, rejects generic/malformed questions and preserves offline content | Unit tests, API contract and integration test | Implemented / live backend test pending |
 
 States are evidence-based. “Implemented” does not mean “verified” until the listed evidence exists for the exact release commit.

@@ -2,6 +2,20 @@
 
 All notable changes to EmmaPrep English are recorded here. Versions follow `major.minor.patch+androidBuild`.
 
+## 1.2.0+3 - 2026-08-25
+
+### Added
+
+- Automatic launch-time API content pipeline with ETag/304 support and offline caching.
+- Strict remote-content validation for the `zimsec-4005` curriculum and exam style.
+- Home settings gear and clearer ZIMSEC 4005 practice labelling.
+
+### Changed
+
+- Users no longer need to trigger content synchronization manually.
+- Remote updates are applied atomically so invalid questions cannot partially replace valid content.
+- Practice navigation is restricted to Paper 1 and Paper 2 exam skills rather than general English trivia.
+
 ## 1.1.0+2 - 2026-08-25
 
 ### Added

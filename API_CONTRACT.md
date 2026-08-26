@@ -44,7 +44,7 @@ Response:
 
 The server should instruct the model to behave as a supportive ZIMSEC English tutor, avoid inventing official rules, give feedback before model answers, and favour active recall and one-question-at-a-time practice.
 
-## Content updates
+## Automatic content pipeline
 
 `GET /v1/content`
 
@@ -52,6 +52,8 @@ Response:
 
 ```json
 {
+  "schema": "emmaprep-content-v1",
+  "curriculum": "zimsec-4005",
   "version": "2026.08.1",
   "lessons": [
     {
@@ -67,6 +69,7 @@ Response:
   "questions": [
     {
       "paper": "Paper 2",
+      "examStyle": "zimsec-4005",
       "question": "What does the image suggest?",
       "answers": ["Answer A", "Answer B", "Answer C", "Answer D"],
       "correctIndex": 1,
@@ -76,7 +79,11 @@ Response:
 }
 ```
 
-Synced content is cached locally and remains available offline. A subsequent successful sync replaces the previous remote content while preserving bundled content and learning progress.
+The app requests this endpoint automatically during launch. An `ETag` response header is recommended; later requests include `If-None-Match`, allowing the server to return `304 Not Modified`. Users do not configure or manually trigger the pipeline.
+
+Synced content is validated, cached locally and remains available offline. A subsequent successful sync atomically replaces previous remote content while preserving bundled content and learning progress. Payloads with another schema/curriculum, malformed questions, or questions without `examStyle: zimsec-4005` are rejected.
+
+Only original questions that reproduce typical **skills and structures** of ZIMSEC English Language 4005 may be published. Do not send generic trivia, unrelated English exercises, invented examination rules or copied copyrighted past-paper passages.
 
 ## Recommended server controls
 

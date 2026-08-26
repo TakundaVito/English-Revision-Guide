@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -499,17 +500,36 @@ const lessons = <Lesson>[
 ];
 
 class Question {
-  final String paper, q, why;
+  final String paper, q, why, examStyle;
   final List<String> a;
   final int correct;
-  const Question(this.paper, this.q, this.a, this.correct, this.why);
-  factory Question.fromJson(Map<String, dynamic> json) => Question(
-    json['paper'] == 'Paper 2' ? 'Paper 2' : 'Paper 1',
-    json['question']?.toString() ?? '',
-    List<String>.from(json['answers'] ?? const []),
-    (json['correctIndex'] as num?)?.toInt() ?? 0,
-    json['explanation']?.toString() ?? '',
-  );
+  const Question(
+    this.paper,
+    this.q,
+    this.a,
+    this.correct,
+    this.why, {
+    this.examStyle = 'zimsec-4005',
+  });
+  factory Question.fromJson(Map<String, dynamic> json) {
+    if (json['examStyle'] != 'zimsec-4005') {
+      throw const FormatException('Only ZIMSEC 4005 questions are accepted');
+    }
+    final answers = List<String>.from(json['answers'] ?? const []);
+    final correctIndex = (json['correctIndex'] as num?)?.toInt() ?? -1;
+    if (answers.length != 4 ||
+        correctIndex < 0 ||
+        correctIndex >= answers.length) {
+      throw const FormatException('Invalid ZIMSEC practice question');
+    }
+    return Question(
+      json['paper'] == 'Paper 2' ? 'Paper 2' : 'Paper 1',
+      json['question']?.toString() ?? '',
+      answers,
+      correctIndex,
+      json['explanation']?.toString() ?? '',
+    );
+  }
 }
 
 const bank = <Question>[
@@ -820,7 +840,7 @@ class Store extends ChangeNotifier {
       reducedMotion = false,
       simpleLanguage = true;
   double textScale = 1.0;
-  String last = '', contentVersion = 'Bundled 1.1';
+  String last = '', contentVersion = 'Bundled 1.2', contentEtag = '';
   final String apiBaseUrl = compiledApiBaseUrl;
   final String apiToken = compiledAppToken;
   bool syncing = false;
@@ -838,7 +858,8 @@ class Store extends ChangeNotifier {
     attempted = p.getInt('attempted') ?? 0;
     streak = p.getInt('streak') ?? 0;
     last = p.getString('last') ?? '';
-    contentVersion = p.getString('contentVersion') ?? 'Bundled 1.1';
+    contentVersion = p.getString('contentVersion') ?? 'Bundled 1.2';
+    contentEtag = p.getString('contentEtag') ?? '';
     darkMode = p.getBool('darkMode') ?? false;
     highContrast = p.getBool('highContrast') ?? false;
     reducedMotion = p.getBool('reducedMotion') ?? false;
@@ -846,6 +867,9 @@ class Store extends ChangeNotifier {
     textScale = p.getDouble('textScale') ?? 1.0;
     _decodeContent(p.getString('remoteContent'));
     notifyListeners();
+    if (apiBaseUrl.isNotEmpty) {
+      unawaited(syncContent(silent: true));
+    }
   }
 
   Future<void> save() async {
@@ -857,6 +881,7 @@ class Store extends ChangeNotifier {
     await p.setInt('streak', streak);
     await p.setString('last', last);
     await p.setString('contentVersion', contentVersion);
+    await p.setString('contentEtag', contentEtag);
     await p.setBool('darkMode', darkMode);
     await p.setBool('highContrast', highContrast);
     await p.setBool('reducedMotion', reducedMotion);
@@ -917,28 +942,29 @@ class Store extends ChangeNotifier {
     if (apiToken.isNotEmpty) 'Authorization': 'Bearer $apiToken',
   };
 
-  void _decodeContent(String? raw) {
-    if (raw == null || raw.isEmpty) return;
+  bool _decodeContent(String? raw) {
+    if (raw == null || raw.isEmpty) return false;
     try {
       final data = jsonDecode(raw) as Map<String, dynamic>;
+      final parsedLessons = (data['lessons'] as List? ?? [])
+          .map((e) => Lesson.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+      final parsedQuestions = (data['questions'] as List? ?? [])
+          .map((e) => Question.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
       remoteLessons
         ..clear()
-        ..addAll(
-          (data['lessons'] as List? ?? []).map(
-            (e) => Lesson.fromJson(Map<String, dynamic>.from(e)),
-          ),
-        );
+        ..addAll(parsedLessons);
       remoteQuestions
         ..clear()
-        ..addAll(
-          (data['questions'] as List? ?? []).map(
-            (e) => Question.fromJson(Map<String, dynamic>.from(e)),
-          ),
-        );
-    } catch (_) {}
+        ..addAll(parsedQuestions);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
-  Future<String> syncContent() async {
+  Future<String> syncContent({bool silent = false}) async {
     if (apiBaseUrl.isEmpty) {
       return 'Online updates are not configured in this build.';
     }
@@ -946,26 +972,44 @@ class Store extends ChangeNotifier {
     notifyListeners();
     try {
       final response = await http
-          .get(Uri.parse('$apiBaseUrl/v1/content'), headers: apiHeaders)
+          .get(
+            Uri.parse('$apiBaseUrl/v1/content'),
+            headers: {
+              ...apiHeaders,
+              if (contentEtag.isNotEmpty) 'If-None-Match': contentEtag,
+            },
+          )
           .timeout(const Duration(seconds: 20));
+      if (response.statusCode == 304) {
+        return 'Content is already current.';
+      }
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return 'Update failed (${response.statusCode}).';
       }
       final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (data['schema'] != 'emmaprep-content-v1' ||
+          data['curriculum'] != 'zimsec-4005') {
+        return 'Update rejected: unsupported curriculum format.';
+      }
       final payload = jsonEncode({
         'lessons': data['lessons'] ?? [],
         'questions': data['questions'] ?? [],
       });
-      _decodeContent(payload);
+      if (!_decodeContent(payload)) {
+        return 'Update rejected: invalid ZIMSEC content.';
+      }
       contentVersion =
           data['version']?.toString() ?? 'Updated ${DateTime.now().toLocal()}';
+      contentEtag = response.headers['etag'] ?? data['etag']?.toString() ?? '';
       final p = await SharedPreferences.getInstance();
       await p.setString('remoteContent', payload);
       await save();
       notifyListeners();
       return 'Updated: ${remoteLessons.length} lessons and ${remoteQuestions.length} questions received.';
     } catch (e) {
-      return 'Could not update. Check the URL, connection and server.';
+      return silent
+          ? 'Offline content remains available.'
+          : 'Could not update. Check the connection and server.';
     } finally {
       syncing = false;
       notifyListeners();
@@ -1179,7 +1223,7 @@ class Home extends StatelessWidget {
                       c,
                       MaterialPageRoute(builder: (_) => AccessibilityPage(s)),
                     ),
-                    icon: const Icon(Icons.tune_rounded),
+                    icon: const Icon(Icons.settings_rounded),
                   ),
                 ),
               ],
@@ -1998,28 +2042,28 @@ class Practice extends StatelessWidget {
     ListView(
       children: [
         const Text(
-          'Practice',
+          'ZIMSEC 4005 practice',
           style: TextStyle(fontSize: 29, fontWeight: FontWeight.w900),
         ),
-        const Text('Test recall. Learn from every answer.'),
+        const Text('Only Paper 1 and Paper 2 exam-skill questions.'),
         const SizedBox(height: 22),
         Drill(
-          'Quick 5',
-          'Five mixed questions.',
+          'Mixed exam check',
+          'Five ZIMSEC 4005 skill questions.',
           Icons.bolt,
           coral,
           () => go(c, null, 5),
         ),
         Drill(
-          'Paper 1 drill',
-          'Writing, register and grammar.',
+          'Paper 1 exam skills',
+          'Composition, guided writing and register.',
           Icons.edit_note,
           const Color(0xffde965d),
           () => go(c, 'Paper 1', null),
         ),
         Drill(
-          'Paper 2 drill',
-          'Comprehension, summary and language.',
+          'Paper 2 exam skills',
+          'Comprehension, summary and language structures.',
           Icons.menu_book,
           const Color(0xff5679b6),
           () => go(c, 'Paper 2', null),
@@ -2588,24 +2632,14 @@ class SyllabusPage extends StatelessWidget {
                 ],
               ),
             ),
-            FilledButton.icon(
-              onPressed: s.syncing
-                  ? null
-                  : () async {
-                      final message = await s.syncContent();
-                      if (c.mounted) {
-                        ScaffoldMessenger.of(
-                          c,
-                        ).showSnackBar(SnackBar(content: Text(message)));
-                      }
-                    },
-              icon: s.syncing
+            Chip(
+              avatar: s.syncing
                   ? const SizedBox.square(
-                      dimension: 16,
+                      dimension: 15,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.sync),
-              label: const Text('Sync'),
+                  : const Icon(Icons.cloud_done_rounded, size: 18),
+              label: Text(s.syncing ? 'Updating' : 'Automatic'),
             ),
           ],
         ),
