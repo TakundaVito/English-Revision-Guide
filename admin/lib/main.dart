@@ -197,6 +197,10 @@ class _AdminHomeState extends State<AdminHome> {
               label: Text('Releases'),
             ),
             NavigationRailDestination(
+              icon: Icon(Icons.people_rounded),
+              label: Text('Users'),
+            ),
+            NavigationRailDestination(
               icon: Icon(Icons.settings_rounded),
               label: Text('Settings'),
             ),
@@ -216,6 +220,7 @@ class _AdminHomeState extends State<AdminHome> {
               changed: refresh,
             ),
             2 => ReleasesPage(revision: revision, changed: refresh),
+            3 => UsersPage(revision: revision, changed: refresh),
             _ => SettingsPage(revision: revision, changed: refresh),
           },
         ),
@@ -562,6 +567,127 @@ class ReleasesPage extends StatelessWidget {
       );
 }
 
+class UsersPage extends StatelessWidget {
+  final int revision;
+  final VoidCallback changed;
+  const UsersPage({required this.revision, required this.changed, super.key});
+  Future<List<Map<String, dynamic>>> load() async =>
+      List<Map<String, dynamic>>.from(
+        await Supabase.instance.client
+            .from('student_profiles')
+            .select()
+            .order('created_at', ascending: false),
+      );
+  Future<void> createStudent(BuildContext context) async {
+    final name = TextEditingController(text: 'Emmaculate');
+    final email = TextEditingController();
+    final password = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Create student credentials'),
+        content: SizedBox(
+          width: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Field(name, 'Student name'),
+              Field(email, 'Email'),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: TextField(
+                  controller: password,
+                  obscureText: true,
+                  decoration: input(
+                    'Temporary password — at least 8 characters',
+                  ),
+                ),
+              ),
+              const Text(
+                'The account is confirmed immediately. Give the credentials only to the intended student and ask her to keep them private.',
+                style: TextStyle(fontSize: 12, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Create account'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    try {
+      final response = await Supabase.instance.client.functions.invoke(
+        'admin-create-student',
+        body: {
+          'displayName': name.text.trim(),
+          'email': email.text.trim(),
+          'password': password.text,
+        },
+      );
+      if (response.status < 200 || response.status >= 300) {
+        throw FormatException(response.data.toString());
+      }
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Account created for ${name.text.trim()}.')),
+      );
+      changed();
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Account creation failed: $error')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) => FutureBuilder<List<Map<String, dynamic>>>(
+    key: ValueKey(revision),
+    future: load(),
+    builder: (context, snapshot) => PageFrame(
+      title: 'Student accounts',
+      subtitle:
+          'Create Emmaculate’s credentials yourself. Public registration remains controlled in Settings.',
+      action: FilledButton.icon(
+        onPressed: () => createStudent(context),
+        icon: const Icon(Icons.person_add_rounded),
+        label: const Text('Create student'),
+      ),
+      child: snapshot.hasError
+          ? ErrorText(snapshot.error)
+          : !snapshot.hasData
+          ? const Center(child: CircularProgressIndicator())
+          : snapshot.data!.isEmpty
+          ? const Center(child: Text('No student profiles yet.'))
+          : ListView.separated(
+              itemCount: snapshot.data!.length,
+              separatorBuilder: (_, _) => const Divider(),
+              itemBuilder: (_, index) {
+                final row = snapshot.data![index];
+                return ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.person_rounded),
+                  ),
+                  title: Text(row['display_name'].toString()),
+                  subtitle: Text('Created ${row['created_at']}'),
+                );
+              },
+            ),
+    ),
+  );
+}
+
 class SettingsPage extends StatefulWidget {
   final int revision;
   final VoidCallback changed;
@@ -579,7 +705,11 @@ class _SettingsPageState extends State<SettingsPage> {
   final maintenanceNotice = TextEditingController();
   final cacheSeconds = TextEditingController();
   String model = 'gpt-5.4-mini';
-  bool aiEnabled = true, loading = true, saving = false;
+  bool aiEnabled = true,
+      registrationEnabled = false,
+      scannerEnabled = true,
+      loading = true,
+      saving = false;
   Map<String, dynamic>? health;
   String? error;
 
@@ -606,6 +736,8 @@ class _SettingsPageState extends State<SettingsPage> {
       cacheSeconds.text = values['content_cache_seconds']?.toString() ?? '300';
       model = values['ai_model']?.toString() ?? 'gpt-5.4-mini';
       aiEnabled = values['ai_enabled'] as bool? ?? true;
+      registrationEnabled = values['registration_enabled'] as bool? ?? false;
+      scannerEnabled = values['question_scanner_enabled'] as bool? ?? true;
       try {
         final response = await Supabase.instance.client.functions.invoke(
           'health',
@@ -636,6 +768,16 @@ class _SettingsPageState extends State<SettingsPage> {
       final userId = Supabase.instance.client.auth.currentUser!.id;
       await Supabase.instance.client.from('app_config').upsert([
         {'key': 'ai_enabled', 'value': aiEnabled, 'updated_by': userId},
+        {
+          'key': 'registration_enabled',
+          'value': registrationEnabled,
+          'updated_by': userId,
+        },
+        {
+          'key': 'question_scanner_enabled',
+          'value': scannerEnabled,
+          'updated_by': userId,
+        },
         {'key': 'ai_model', 'value': model, 'updated_by': userId},
         {'key': 'content_cache_seconds', 'value': cache, 'updated_by': userId},
         {
@@ -724,6 +866,27 @@ class _SettingsPageState extends State<SettingsPage> {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 14),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                secondary: const Icon(Icons.person_add_alt_1_rounded),
+                title: const Text('Allow public account creation'),
+                subtitle: const Text(
+                  'Keep off while EmmaPrep is private. Turn on when other students may register.',
+                ),
+                value: registrationEnabled,
+                onChanged: (value) =>
+                    setState(() => registrationEnabled = value),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                secondary: const Icon(Icons.document_scanner_rounded),
+                title: const Text('Question picture scanner'),
+                subtitle: const Text(
+                  'Allow students to analyse question pictures through the secured API.',
+                ),
+                value: scannerEnabled,
+                onChanged: (value) => setState(() => scannerEnabled = value),
+              ),
               Field(
                 minimumVersion,
                 'Minimum supported app version',
@@ -784,7 +947,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 leading: Icon(Icons.admin_panel_settings_rounded),
                 title: Text('EmmaPrep Admin'),
                 subtitle: Text(
-                  'Version 1.1.0 — Takunda Vito\ntakunda.vito.co.zw',
+                  'Version 1.2.0 — Takunda Vito\ntakunda.vito.co.zw',
                 ),
               ),
               const Text(
