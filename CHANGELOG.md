@@ -7,6 +7,7 @@ All notable changes to EmmaPrep English are recorded here. Versions follow `majo
 ### Fixed
 
 - Scanner retries a minimal Groq vision request when JSON-mode parameters are rejected.
+- Scanner limits are per signed-in learner; invalid uploads no longer consume attempts.
 - Coach now receives the latest conversation turns instead of older turns, improving continuity.
 
 ### Improved
@@ -14,6 +15,7 @@ All notable changes to EmmaPrep English are recorded here. Versions follow `majo
 - Coach defaults to concise adaptive ZIMSEC examination drills with numbered options and immediate correction.
 - Image base64 encoding runs outside the UI isolate to reduce camera and scanner frame stalls.
 - Coach history is capped at twelve recent messages for continuity without unbounded token usage.
+- Scanner allows ten requests per minute and uses a smaller response budget to reduce provider-limit pressure.
 
 ## 1.5.2+8 - 2026-08-26
 

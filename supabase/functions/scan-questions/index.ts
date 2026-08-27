@@ -18,19 +18,20 @@ Deno.serve(async (request) => {
   const apiKey = Deno.env.get(provider === 'groq' ? 'GROQ_API_KEY' : 'OPENAI_API_KEY')
   if (!apiKey) return Response.json({ error: 'Question scanner is not configured' }, { status: 503, headers: cors })
 
-  const address = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
-  const salt = Deno.env.get('RATE_LIMIT_SALT') ?? 'configure-rate-limit-salt'
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${salt}:scan:${address}`))
-  const clientHash = Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('')
-  const since = new Date(Date.now() - 60_000).toISOString()
-  const { count } = await admin.from('chat_rate_limits').select('*', { count: 'exact', head: true }).eq('client_hash', clientHash).gte('created_at', since)
-  if ((count ?? 0) >= 4) return Response.json({ error: 'Please wait before scanning again' }, { status: 429, headers: cors })
-  await admin.from('chat_rate_limits').insert({ client_hash: clientHash })
-
   const body = await request.json()
   const images = Array.isArray(body.images) ? body.images.slice(0, 3).filter((value: unknown) => typeof value === 'string' && value.toString().startsWith('data:image/')) : []
   if (images.length === 0) return Response.json({ error: 'At least one image is required' }, { status: 400, headers: cors })
   if (images.some((image: string) => image.length > 6_000_000)) return Response.json({ error: 'An image is too large' }, { status: 413, headers: cors })
+
+  // Limit each authenticated learner independently. Invalid requests are rejected
+  // above and do not consume an attempt.
+  const salt = Deno.env.get('RATE_LIMIT_SALT') ?? 'configure-rate-limit-salt'
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${salt}:scan:${user.id}`))
+  const clientHash = Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('')
+  const since = new Date(Date.now() - 60_000).toISOString()
+  const { count } = await admin.from('chat_rate_limits').select('*', { count: 'exact', head: true }).eq('client_hash', clientHash).gte('created_at', since)
+  if ((count ?? 0) >= 10) return Response.json({ error: 'You have scanned several pages quickly. Wait one minute, then try again.', retryAfterSeconds: 60 }, { status: 429, headers: { ...cors, 'Retry-After': '60' } })
+  await admin.from('chat_rate_limits').insert({ client_hash: clientHash })
 
   const prompt = 'Read the images in page order. They may contain a passage, questions, or a passage followed by questions on later pages. Transcribe the relevant passage into the passage field once for each related question, preserving paragraph order across images. Extract every visible question relevant to ZIMSEC O-Level English Language 4005 Paper 1 or Paper 2 and answer it accurately. For an open-ended question, put the best model answer first and add three short plausible alternatives so the learner can practise it as a four-option question without changing the tested skill. In explanation, start with “How to attack it:” and give simple numbered actions, then explain why the model answer works using passage evidence where needed. The studyNote must give one short exam tip. If text is unclear, state what is unclear instead of guessing. Return only JSON shaped exactly as {"questions":[{"paper":"Paper 1","passage":"passage text or empty string","question":"...","answers":["...","...","...","..."],"correctIndex":0,"explanation":"...","studyNote":"..."}]}.'
   const content = [
@@ -52,7 +53,7 @@ Deno.serve(async (request) => {
       messages: [{ role: 'user', content: groqContent }],
       response_format: { type: 'json_object' },
       reasoning_format: 'hidden',
-      max_completion_tokens: 4500,
+      max_completion_tokens: 3000,
     } : {
       model: String(config.ai_model ?? 'gpt-5.4-mini'),
       input: [{ role: 'user', content }],
@@ -80,7 +81,7 @@ Deno.serve(async (request) => {
       body: JSON.stringify({
         model: groqModel,
         messages: [{ role: 'user', content: groqContent }],
-        max_completion_tokens: 4500,
+        max_completion_tokens: 3000,
       }),
     })
   }
@@ -92,7 +93,7 @@ Deno.serve(async (request) => {
       : response.status === 404
       ? 'The selected picture model is unavailable'
       : response.status === 429
-      ? 'The picture service rate limit was reached'
+      ? 'The picture service is temporarily busy or its provider allowance was reached. Wait one minute and try one clear page.'
       : response.status === 400
       ? 'The picture service rejected the images or selected model'
       : 'Question recognition failed'
