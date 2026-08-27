@@ -41,11 +41,14 @@ Deno.serve(async (request) => {
     { type: 'text', text: `${prompt} Return only a valid JSON object with a questions array.` },
     ...images.map((image: string) => ({ type: 'image_url', image_url: { url: image } })),
   ]
-  const response = await fetch(provider === 'groq' ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.openai.com/v1/responses', {
+  const providerUrl = provider === 'groq' ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.openai.com/v1/responses'
+  const providerHeaders = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
+  const groqModel = String(config.groq_vision_model ?? 'qwen/qwen3.6-27b')
+  let response = await fetch(providerUrl, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    headers: providerHeaders,
     body: JSON.stringify(provider === 'groq' ? {
-      model: String(config.groq_vision_model ?? 'qwen/qwen3.6-27b'),
+      model: groqModel,
       messages: [{ role: 'user', content: groqContent }],
       response_format: { type: 'json_object' },
       reasoning_format: 'hidden',
@@ -68,6 +71,19 @@ Deno.serve(async (request) => {
       } } },
     }),
   })
+  if (provider === 'groq' && response.status === 400) {
+    const firstError = (await response.text()).slice(0, 800)
+    console.warn(JSON.stringify({ event: 'question_scan_json_mode_retry', requestId, status: 400, providerError: firstError }))
+    response = await fetch(providerUrl, {
+      method: 'POST',
+      headers: providerHeaders,
+      body: JSON.stringify({
+        model: groqModel,
+        messages: [{ role: 'user', content: groqContent }],
+        max_completion_tokens: 4500,
+      }),
+    })
+  }
   if (!response.ok) {
     const providerError = (await response.text()).slice(0, 800)
     console.error(JSON.stringify({ event: 'question_scan_provider_failed', requestId, provider, status: response.status, imageCount: images.length, providerError }))

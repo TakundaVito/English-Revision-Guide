@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -19,6 +20,12 @@ const compiledAppToken = String.fromEnvironment('EMMAPREP_APP_TOKEN');
 const compiledSupabaseUrl = String.fromEnvironment('EMMAPREP_SUPABASE_URL');
 const compiledSupabaseKey = String.fromEnvironment('EMMAPREP_SUPABASE_KEY');
 bool supabaseReady = false;
+
+String _encodeJpegDataUrl(Uint8List bytes) =>
+    'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+Future<String> encodeImageForApi(XFile image) async =>
+    compute(_encodeJpegDataUrl, await image.readAsBytes());
 
 String signedInStudentName() {
   if (!supabaseReady) return 'Student';
@@ -66,7 +73,7 @@ Future<void> logStudentEvent(
       'source': 'student_app',
       'event_name': eventName,
       'level': level,
-      'app_version': '1.5.2',
+      'app_version': '1.5.3',
       'metadata': metadata,
     });
   } catch (error) {
@@ -1106,8 +1113,7 @@ class Store extends ChangeNotifier {
       ),
     );
     for (final image in images.take(3)) {
-      final bytes = await image.readAsBytes();
-      encoded.add('data:image/jpeg;base64,${base64Encode(bytes)}');
+      encoded.add(await encodeImageForApi(image));
     }
     debugPrint(
       '[EmmaPrep Student][info] question_scan_upload_started {imageCount: ${encoded.length}}',
@@ -2039,7 +2045,7 @@ class AccessibilityPage extends StatelessWidget {
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            Text('Version 1.5.2 (build 8)'),
+                            Text('Version 1.5.3 (build 9)'),
                           ],
                         ),
                       ),
@@ -3386,9 +3392,7 @@ class _CoachPageState extends State<CoachPage> {
     try {
       final encodedAttachments = <String>[];
       for (final attachment in attachments) {
-        encodedAttachments.add(
-          'data:image/jpeg;base64,${base64Encode(await attachment.readAsBytes())}',
-        );
+        encodedAttachments.add(await encodeImageForApi(attachment));
       }
       final response = await http
           .post(
@@ -3404,7 +3408,7 @@ class _CoachPageState extends State<CoachPage> {
                   'Use simple English, Zimbabwean everyday examples, one worked example, then one short practice task.',
               'images': encodedAttachments,
               'history': messages
-                  .take(max(0, messages.length - 8))
+                  .skip(max(0, messages.length - 12))
                   .map(
                     (m) => {
                       'role': m.user ? 'user' : 'assistant',

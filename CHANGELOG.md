@@ -2,6 +2,19 @@
 
 All notable changes to EmmaPrep English are recorded here. Versions follow `major.minor.patch+androidBuild`.
 
+## 1.5.3+9 - 2026-08-26
+
+### Fixed
+
+- Scanner retries a minimal Groq vision request when JSON-mode parameters are rejected.
+- Coach now receives the latest conversation turns instead of older turns, improving continuity.
+
+### Improved
+
+- Coach defaults to concise adaptive ZIMSEC examination drills with numbered options and immediate correction.
+- Image base64 encoding runs outside the UI isolate to reduce camera and scanner frame stalls.
+- Coach history is capped at twelve recent messages for continuity without unbounded token usage.
+
 ## 1.5.2+8 - 2026-08-26
 
 ### Fixed
