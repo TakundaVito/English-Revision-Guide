@@ -2,6 +2,18 @@
 
 All notable changes to EmmaPrep English are recorded here. Versions follow `major.minor.patch+androidBuild`.
 
+## 1.9.0+14 - 2026-08-27
+
+### Added
+
+- Compile-time private and public editions controlled by `EMMAPREP_PERSONAL_EDITION`.
+- Public builds use the authenticated learner’s name and exclude the private motivation entry point and relationship messages.
+
+### Security and privacy
+
+- The public edition is the default; the private wife edition must be selected explicitly at build time.
+- Student display names sent to the Coach are length-limited and sanitised before entering server instructions.
+
 ## 1.8.0+13 - 2026-08-27
 
 ### Added

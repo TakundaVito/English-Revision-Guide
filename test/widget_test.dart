@@ -77,13 +77,17 @@ void main() {
     expect(displayed, contains('• Read the command word.'));
   });
 
-  testWidgets('shows Emmaculate personalised home screen', (tester) async {
+  testWidgets('public edition hides private relationship content', (
+    tester,
+  ) async {
     await tester.pumpWidget(const EmmaPrep());
     expect(find.text('POWERED BY'), findsOneWidget);
     expect(find.text('TAKUNDA VITO'), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 1500));
     await tester.pumpAndSettle();
-    expect(find.text('Emmaculate'), findsOneWidget);
+    expect(find.text('Student'), findsOneWidget);
+    expect(find.text('For Emmaculate'), findsNothing);
+    expect(find.textContaining('always and forever'), findsNothing);
     expect(find.text('48-hour Paper 1 route'), findsOneWidget);
     await tester.drag(find.byType(ListView).first, const Offset(0, -500));
     await tester.pumpAndSettle();

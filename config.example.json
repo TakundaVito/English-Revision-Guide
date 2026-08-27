@@ -2,5 +2,6 @@
   "EMMAPREP_API_URL": "https://YOUR_PROJECT.supabase.co/functions",
   "EMMAPREP_APP_TOKEN": "sb_publishable_YOUR_KEY",
   "EMMAPREP_SUPABASE_URL": "https://YOUR_PROJECT.supabase.co",
-  "EMMAPREP_SUPABASE_KEY": "sb_publishable_YOUR_KEY"
+  "EMMAPREP_SUPABASE_KEY": "sb_publishable_YOUR_KEY",
+  "EMMAPREP_PERSONAL_EDITION": "false"
 }

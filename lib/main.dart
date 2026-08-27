@@ -19,6 +19,10 @@ const compiledApiBaseUrl = String.fromEnvironment('EMMAPREP_API_URL');
 const compiledAppToken = String.fromEnvironment('EMMAPREP_APP_TOKEN');
 const compiledSupabaseUrl = String.fromEnvironment('EMMAPREP_SUPABASE_URL');
 const compiledSupabaseKey = String.fromEnvironment('EMMAPREP_SUPABASE_KEY');
+const personalEdition = bool.fromEnvironment(
+  'EMMAPREP_PERSONAL_EDITION',
+  defaultValue: false,
+);
 bool supabaseReady = false;
 
 String _encodeJpegDataUrl(Uint8List bytes) =>
@@ -40,6 +44,9 @@ String signedInStudentInitial() {
   final name = signedInStudentName();
   return name.characters.first.toUpperCase();
 }
+
+String learnerDisplayName() =>
+    personalEdition ? 'Emmaculate' : signedInStudentName();
 
 String coachDisplayText(String raw) {
   var text = raw
@@ -73,7 +80,7 @@ Future<void> logStudentEvent(
       'source': 'student_app',
       'event_name': eventName,
       'level': level,
-      'app_version': '1.8.0',
+      'app_version': '1.9.0',
       'metadata': metadata,
     });
   } catch (error) {
@@ -1945,7 +1952,7 @@ class StudentLoginPage extends StatefulWidget {
 }
 
 class _StudentLoginPageState extends State<StudentLoginPage> {
-  final name = TextEditingController(text: 'Emmaculate');
+  final name = TextEditingController(text: personalEdition ? 'Emmaculate' : '');
   final email = TextEditingController();
   final password = TextEditingController();
   bool create = false, busy = false, hidePassword = true;
@@ -2038,7 +2045,9 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
                     Text(
                       create
                           ? 'Your progress and learning space begin here.'
-                          : 'Sign in with the credentials Takunda created for you.',
+                          : personalEdition
+                          ? 'Sign in with the credentials Takunda created for you.'
+                          : 'Sign in to continue your ZIMSEC English revision.',
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 22),
@@ -2304,18 +2313,18 @@ class Home extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                const Row(
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Emmaculate',
-                      style: TextStyle(
+                      learnerDisplayName(),
+                      style: const TextStyle(
                         fontSize: 29,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(width: 9),
-                    OloidMark(size: 34),
+                    const SizedBox(width: 9),
+                    const OloidMark(size: 34),
                   ],
                 ),
                 Positioned(
@@ -2483,10 +2492,10 @@ class Home extends StatelessWidget {
                     child: Icon(Icons.lightbulb, color: Color(0xffa55c00)),
                   ),
                   const SizedBox(width: 13),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Emma’s exam tip\nRead every command word twice. It tells you what the examiner rewards.',
-                      style: TextStyle(height: 1.4),
+                      '${personalEdition ? 'Emma’s exam tip' : 'Exam tip'}\nRead every command word twice. It tells you what the examiner rewards.',
+                      style: const TextStyle(height: 1.4),
                     ),
                   ),
                 ],
@@ -2494,53 +2503,57 @@ class Home extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          InkWell(
-            borderRadius: BorderRadius.circular(22),
-            onTap: () => Navigator.push(
-              c,
-              MaterialPageRoute(builder: (_) => const MotivationPage()),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [plum, coral]),
-                borderRadius: BorderRadius.circular(22),
+          if (personalEdition)
+            InkWell(
+              borderRadius: BorderRadius.circular(22),
+              onTap: () => Navigator.push(
+                c,
+                MaterialPageRoute(builder: (_) => const MotivationPage()),
               ),
-              child: const Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: Colors.white24,
-                    child: Icon(
-                      Icons.favorite_rounded,
-                      color: Color(0xffffb6c7),
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [plum, coral]),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: const Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.white24,
+                      child: Icon(
+                        Icons.favorite_rounded,
+                        color: Color(0xffffb6c7),
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 13),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'For Emmaculate',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
+                    SizedBox(width: 13),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'For Emmaculate',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 3),
-                        Text(
-                          'A message from Takunda, always here when you need courage.',
-                          style: TextStyle(color: Colors.white70, height: 1.35),
-                        ),
-                      ],
+                          SizedBox(height: 3),
+                          Text(
+                            'A message from Takunda, always here when you need courage.',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Icon(Icons.chevron_right_rounded, color: Colors.white70),
-                ],
+                    Icon(Icons.chevron_right_rounded, color: Colors.white70),
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -2697,7 +2710,7 @@ class AccessibilityPage extends StatelessWidget {
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            Text('Version 1.8.0 (build 13)'),
+                            Text('Version 1.9.0 (build 14)'),
                           ],
                         ),
                       ),
@@ -4001,7 +4014,9 @@ class Result extends StatelessWidget {
               const Icon(Icons.auto_awesome, color: coral, size: 64),
               const SizedBox(height: 16),
               Text(
-                p >= 70 ? 'Beautiful work, Emma!' : 'Keep building, Emma.',
+                p >= 70
+                    ? 'Excellent work, ${learnerDisplayName()}!'
+                    : 'Keep building, ${learnerDisplayName()}.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 30,
@@ -4053,10 +4068,10 @@ class _CoachPageState extends State<CoachPage> {
   final scroll = ScrollController();
   final picker = ImagePicker();
   final attachments = <XFile>[];
-  final messages = <ChatMessage>[
-    const ChatMessage(
+  late final messages = <ChatMessage>[
+    ChatMessage(
       false,
-      'Hi Emma! I’m your English study coach. Ask me to explain a skill, mark a short answer, create a practice question, or help you plan a composition.',
+      'Hi ${learnerDisplayName()}! I’m your English study coach. Ask me to explain a skill, mark a short answer, create a practice question, or help you plan a composition.',
     ),
   ];
   bool sending = false, pickerBusy = false;
@@ -4203,7 +4218,7 @@ class _CoachPageState extends State<CoachPage> {
             headers: widget.s.apiHeaders,
             body: jsonEncode({
               'message': text,
-              'student': 'Emmaculate',
+              'student': learnerDisplayName(),
               'course': 'ZIMSEC English Language 4005/01 and 4005/02',
               'mode': 'learning_and_practice',
               'locale': 'Zimbabwe',
