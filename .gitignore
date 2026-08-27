@@ -40,6 +40,7 @@ config.production.json
 /node_modules/
 /supabase/.temp/
 /coverage/
+/tmp/
 /docs/verification/latest.json
 
 # Symbolication related

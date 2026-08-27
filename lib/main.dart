@@ -73,7 +73,7 @@ Future<void> logStudentEvent(
       'source': 'student_app',
       'event_name': eventName,
       'level': level,
-      'app_version': '1.6.1',
+      'app_version': '1.8.0',
       'metadata': metadata,
     });
   } catch (error) {
@@ -253,12 +253,75 @@ class Lesson {
     task:
         'Turn these into concise summary points: “She quickly tied the rope; she pulled the canoe ashore; she repeatedly checked it for damage.”',
   ),
+  'p1-exam-map-2024' => (
+    worked:
+        'June 2024 instruction check:\n• Total time: 1 hour 30 minutes\n• Answer two questions\n• Section A: choose one composition, 350–450 words, 30 marks, about 50 minutes\n• Section B: answer the compulsory guided task, 20 marks, about 40 minutes\n\nSafe timing: Section A plan 5, write 40, edit 5; Section B plan 5, write 30, edit 5.',
+    task:
+        'Without looking, state how many questions you answer, the word range for Section A and the suggested time for each section.',
+  ),
+  'p1-description-2024' => (
+    worked:
+        'Exam question: “Describe what you would do with a million United States dollar prize.”\n\nDecode it: describe planned actions, choices and reasons. A strong route could move from immediate family needs, to education or enterprise, to community benefit, while showing priorities and consequences. Do not merely list purchases.',
+    task:
+        'Make a five-paragraph plan for the prize question. Give each paragraph one action, its reason and its likely result.',
+  ),
+  'p1-statement-story-2024' => (
+    worked:
+        'Exam statement: “The family secret had been exposed and there was nothing the father could do.”\n\nBuild backwards: What secret? Who exposed it? Why is the father powerless? Then build forwards: confrontation, consequence and change. The exact statement must matter naturally at the turning point or ending.',
+    task:
+        'Write a six-event plot in which the exposed secret causes the ending. Circle where the examination statement fits naturally.',
+  ),
+  'p1-argument-2024' => (
+    worked:
+        'Exam question: “How can the standard of discipline in schools be improved?”\n\nParagraph plan: clear rules and fair consequences; counselling and parent partnership; engaging lessons and activities; learner leadership; consistent adult example. Each paragraph needs method → explanation → practical example → expected result.',
+    task:
+        'Develop one paragraph on counselling using this frame: method, why it works, realistic school example, result.',
+  ),
+  'p1-open-title-2024' => (
+    worked:
+        'Exam title: “Food”.\n\nThe instruction says not to treat the title as a character’s name. Choose a controlled interpretation: a descriptive market scene, a story about scarcity or generosity, or an argument about food waste. Make “food” central from beginning to end.',
+    task:
+        'Choose one valid approach to “Food” and write a one-sentence controlling idea plus five paragraph purposes.',
+  ),
+  'p1-guided-letter-2024' => (
+    worked:
+        'June 2024 task map:\nRole: Junior Member of Parliament for the local area.\nReader: Officer-in-Charge of the nearest police station.\nPurpose: raise concern about rising crime, suggest causes and propose ways to reduce it.\nGiven ideas: awareness campaigns, youth unemployment, indiscipline, drug/alcohol abuse and community involvement.\n\nGroup the ideas instead of copying them: causes → unemployment, indiscipline, substance abuse; solutions → campaigns, community/police cooperation, youth programmes. Add one relevant developed idea.',
+    task:
+        'Write the subject line, formal opening and one developed cause-solution paragraph for this exact role and reader.',
+  ),
   _ => (
     worked:
         'Take one rule from this lesson and apply it to a sentence or short paragraph from everyday life. Compare your first attempt with the checklist below.',
     task:
         'Create your own example, then explain in one sentence why it follows the lesson rule.',
   ),
+};
+
+String? modelAnswerFor(Lesson lesson) => switch (lesson.id) {
+  'p1-description-2024' =>
+    'If I won a million United States dollars, I would first place most of it in a secure account and seek qualified financial advice. Excitement can turn a prize into waste, so every major decision would need a budget and a clear purpose.\n\n'
+        'My first priority would be my family. I would buy a modest home, arrange reliable medical care for my parents and create an education fund for younger relatives. These choices would provide security without creating an expensive lifestyle that the family could not maintain.\n\n'
+        'Next, I would establish a solar-powered food-processing business that bought tomatoes, groundnuts and fruit from local farmers. The business could produce dried fruit, peanut butter and bottled sauces while creating employment. I would begin on a small scale, employ experienced managers and reinvest part of the profit.\n\n'
+        'I would use another portion to open a community reading and skills centre with textbooks, internet access and evening lighting. Learners would gain a quiet study space, while young adults could attend practical courses. Finally, I would keep an emergency reserve and invest for the future. The prize would therefore become more than money for luxury: it would strengthen my family, create work and give other people lasting opportunities.',
+  'p1-statement-story-2024' =>
+    'The envelope lay unopened in the centre of the dining-room table. My father stood by the window while angry residents gathered outside our gate. That morning, a newspaper had published documents showing that he had secretly sold the community football ground to a property company. For years, he had led the campaign to protect it.\n\n'
+        'Coach Moyo entered and placed the newspaper before him. “Why?” he asked. Father admitted that he had needed money for Mother’s treatment and had believed he could replace it before anyone discovered the sale. The drought had killed the cattle he planned to sell, while the company’s machines were already waiting beside the field. The family secret had been exposed and there was nothing the father could do.\n\n'
+        'Then my sister brought out the sports club’s small cashbox. Her action inspired former players to begin a national fundraising campaign, and a lawyer offered to challenge the sale because residents had not been consulted. Months later, the agreement was cancelled. Father contributed everything he could, but he was not asked to lead the reopening celebration. Saving the field did not erase his betrayal; it merely gave him the chance to begin earning forgiveness.',
+  'p1-argument-2024' =>
+    'The standard of discipline in schools can be improved when schools combine clear rules with support that addresses the causes of misconduct. Punishment alone may stop an action briefly, but it does not always teach a learner to make better choices.\n\n'
+        'First, each school should use a short code of conduct that learners and parents understand. It must connect each offence to a fair and consistent consequence. Schools should also provide counselling because repeated aggression, absence or substance abuse may be linked to bullying, grief or serious difficulties at home. Counselling does not excuse wrongdoing; it helps remove the problem that punishment may leave untouched.\n\n'
+        'Parents should receive concerns early and help create improvement plans. Sport, debate, music and community service can also give learners responsibility and belonging. Finally, teachers must model punctuality, respect and self-control. Discipline becomes credible when adults follow the standards they demand.\n\n'
+        'Therefore, better discipline requires fair rules, consistent consequences, counselling, parent cooperation, purposeful activities and responsible adult example. When these measures work together, discipline becomes part of education rather than a response based only on fear.',
+  'p1-open-title-2024' =>
+    'By five o’clock, the market had become a theatre of colour and sound. Tomatoes formed red mountains, vegetables glistened beneath sprays of water and vendors raised plates of sadza above the crowd. Tariro moved between the stalls with twelve dollars and a family waiting for supper.\n\n'
+        'Near the exit, she noticed an elderly woman behind a tray of soft, spotted bananas. Buying them would leave little money for cooking oil, but the woman’s hands shook as she packed the fruit. Tariro bought the entire tray. At home, her brothers helped mash the bananas, mix them with flour and cook small cakes beside a pot of beans.\n\n'
+        'The next morning, Tariro carried two cakes back to the market. The old woman tasted one and offered her an empty corner beside the stall. Within a week, Tariro was buying overripe fruit that vendors would otherwise throw away and turning it into affordable breakfasts. Food had first appeared as a daily problem measured in coins. Imagination transformed it into dignity, useful work and hope.',
+  'p1-guided-letter-2024' =>
+    '24 Chiedza Road\nMufaro Township\n14 June 2024\n\nThe Officer-in-Charge\nMufaro Police Station\nMufaro\n\nDear Sir/Madam\n\nRE: RISING CRIME IN MUFARO TOWNSHIP\n\n'
+        'I write in my capacity as the Junior Member of Parliament for Mufaro to express residents’ concern about increasing robberies, assaults and house break-ins. The incidents have made workers afraid to travel after dark and forced some businesses to close early.\n\n'
+        'Youth unemployment leaves some young people vulnerable to criminal groups promising quick money. Drug and alcohol abuse worsens the problem, while indiscipline and fear prevent residents from reporting offenders. I propose police-led awareness campaigns on safety and confidential reporting, together with targeted patrols around poorly lit roads and business centres.\n\n'
+        'Residents could form neighbourhood watch groups under police guidance. Schools, churches and businesses should also provide counselling, sport, skills training and apprenticeships for young people. I therefore request a meeting between your station and community representatives to agree on responsibilities and a timetable.\n\nYours faithfully\n\nT. Moyo\nJunior Member of Parliament - Mufaro',
+  _ => null,
 };
 
 const lessons = <Lesson>[
@@ -718,6 +781,138 @@ const lessons = <Lesson>[
       'Words counted and limit respected',
     ],
   ),
+  Lesson(
+    'p1-exam-map-2024',
+    'Paper 1',
+    'June 2024 Paper 1: Know the Exam',
+    'Question choice, marks, length and timing',
+    'Start with the paper itself. A learner who misunderstands the choices, word range or timing can lose marks before the writing is judged.',
+    Icons.timer_rounded,
+    Color(0xff2854c7),
+    [
+      'Answer exactly two questions: one chosen composition from Section A and the compulsory Section B task.',
+      'Section A carries 30 marks and requires 350–450 words; the paper advises 50 minutes.',
+      'Section B carries 20 marks; the paper advises 40 minutes and a fresh page.',
+      'Choose the Section A question you can develop accurately, not the one with the most impressive title.',
+      'Reserve five minutes in each section for planning and five for checking.',
+    ],
+    [
+      'Two answers only',
+      'One Section A choice',
+      'Section B completed',
+      'Timing and word range remembered',
+    ],
+  ),
+  Lesson(
+    'p1-description-2024',
+    'Paper 1',
+    'Q1: Describe What You Would Do',
+    'Turn a broad prize question into developed choices',
+    'The exact June 2024 question asks what you would do with a million-US-dollar prize. It tests organisation, relevant development, control and clear expression—not a shopping list.',
+    Icons.savings_rounded,
+    Color(0xffd75d62),
+    [
+      'Underline “describe what you would do”; every main paragraph must present and develop an action.',
+      'Arrange actions by priority or time: immediate, medium-term and long-term.',
+      'For every choice, explain why it matters and what result it would produce.',
+      'Use specific detail, but keep the imagined spending believable and connected.',
+      'End by showing the overall difference the prize would make.',
+    ],
+    [
+      'Actions answer the title',
+      'Reasons and effects developed',
+      'Paragraph order is logical',
+      'Not merely a list',
+    ],
+  ),
+  Lesson(
+    'p1-statement-story-2024',
+    'Paper 1',
+    'Q2: Story from a Given Statement',
+    'Make the supplied sentence essential to the plot',
+    'June 2024 warns that forcing a supplied statement into an unrelated story is penalised. Plan the cause and consequences around the statement before writing.',
+    Icons.account_tree_rounded,
+    Color(0xffb85b78),
+    [
+      'Decide whether the statement is the opening, turning point or ending.',
+      'Ask what must happen before the statement can be true.',
+      'Ask what must change because of it; this creates the rest of the plot.',
+      'Use few believable characters and one central conflict.',
+      'Keep tense and viewpoint stable and avoid an unrelated memorised story.',
+    ],
+    [
+      'Statement drives the plot',
+      'Clear cause and consequence',
+      'Conflict reaches a turning point',
+      'Ending resolves the central problem',
+    ],
+  ),
+  Lesson(
+    'p1-argument-2024',
+    'Paper 1',
+    'Q3, Q5 and Q6: Views and Discussion',
+    'Build a position with reasons, examples and balance',
+    'The June 2024 paper includes “What are your views?”, “How can...?” and “Discuss.” These commands need related but different answer plans.',
+    Icons.balance_rounded,
+    Color(0xff9b6b43),
+    [
+      '“What are your views?” requires a clear position supported by reasons.',
+      '“How can...be improved?” requires practical methods and explanations of how they work.',
+      '“Discuss” requires fair consideration of both sides before a reasoned judgement.',
+      'Use claim → explanation → example → link in each body paragraph.',
+      'Avoid unsupported claims, insults and repeating the title as a conclusion.',
+    ],
+    [
+      'Command word controls structure',
+      'Position is clear',
+      'Examples are realistic',
+      'Conclusion weighs the argument',
+    ],
+  ),
+  Lesson(
+    'p1-open-title-2024',
+    'Paper 1',
+    'Q7: One-Word Open Title',
+    'Choose one interpretation and control it',
+    'The June 2024 title is “Food”, with an instruction not to use it as a character’s name. Open titles reward relevance and control, not an attempt to mention every possible meaning.',
+    Icons.restaurant_rounded,
+    Color(0xffde965d),
+    [
+      'Choose a mode before planning: narrative, descriptive, reflective or argumentative.',
+      'Write one controlling sentence that explains what the whole composition will explore.',
+      'Make every paragraph deepen that interpretation of the title.',
+      'Use an opening image, conflict or claim that immediately establishes relevance.',
+      'Check the special instruction; breaking it can damage relevance severely.',
+    ],
+    [
+      'One clear interpretation',
+      'Special instruction obeyed',
+      'Title remains central',
+      'Paragraphs develop rather than wander',
+    ],
+  ),
+  Lesson(
+    'p1-guided-letter-2024',
+    'Paper 1',
+    'Section B: Crime Letter',
+    'Decode role, reader, causes and solutions',
+    'The compulsory June 2024 task is a formal letter from a Junior Member of Parliament to a police Officer-in-Charge about rising crime. It requires concern, causes, solutions, supplied ideas and other relevant information.',
+    Icons.mark_email_read_rounded,
+    Color(0xff397f86),
+    [
+      'Use a formal letter format, a precise subject line and a respectful official tone.',
+      'State the local crime concern and purpose immediately.',
+      'Develop causes such as unemployment, indiscipline and substance abuse instead of copying the prompts.',
+      'Develop solutions such as awareness campaigns, community involvement, visible policing and youth programmes.',
+      'Link each recommendation to a cause and request clear action in the closing.',
+    ],
+    [
+      'Role and reader correct',
+      'Formal format and register',
+      'Causes explained',
+      'Solutions developed and linked',
+    ],
+  ),
 ];
 
 class Question {
@@ -754,6 +949,97 @@ class Question {
 }
 
 const bank = <Question>[
+  Question(
+    'Paper 1',
+    'In the June 2024 Paper 1, what must a candidate answer?',
+    [
+      'Any two Section A compositions',
+      'One Section A composition and the Section B task',
+      'Only the Section B task',
+      'All seven Section A topics',
+    ],
+    1,
+    'The instructions require two answers: one chosen composition from Section A and the compulsory question from Section B.',
+  ),
+  Question(
+    'Paper 1',
+    'What is the required Section A composition length in the June 2024 paper?',
+    ['150–200 words', '250–300 words', '350–450 words', 'At least 600 words'],
+    2,
+    'The printed instruction specifies 350–450 words for Section A.',
+  ),
+  Question(
+    'Paper 1',
+    'A candidate chooses the million-dollar-prize question. Which plan best answers “Describe what you would do”?',
+    [
+      'A list of expensive items with no explanation',
+      'A history of money in the world',
+      'Prioritised actions, with reasons and likely results',
+      'A story in which no prize is received',
+    ],
+    2,
+    'The task requires developed actions. Reasons and consequences turn a list into a controlled composition.',
+  ),
+  Question(
+    'Paper 1',
+    'What is the main danger when writing a story from a supplied statement?',
+    [
+      'Using paragraphs',
+      'Making the statement essential to the plot',
+      'Forcing the statement into an unrelated memorised story',
+      'Using past tense',
+    ],
+    2,
+    'The paper explicitly warns that an irrelevant story with a forced statement will be penalised.',
+  ),
+  Question(
+    'Paper 1',
+    'Which structure best answers “How can the standard of discipline in schools be improved?”',
+    [
+      'Method → explanation → example → expected result',
+      'A list of badly behaved learners',
+      'A story about one school day',
+      'Definitions of every word in the title',
+    ],
+    0,
+    '“How can” asks for workable methods. Each method must be explained and connected to an improvement.',
+  ),
+  Question(
+    'Paper 1',
+    'For the June 2024 one-word title “Food”, which approach obeys the special instruction?',
+    [
+      'Make Food the name of the main character',
+      'Write a focused composition about food waste',
+      'Ignore food after the first sentence',
+      'Write unrelated memorised notes',
+    ],
+    1,
+    'A focused treatment of food waste keeps the title central and does not misuse “Food” as a character’s name.',
+  ),
+  Question(
+    'Paper 1',
+    'In the June 2024 Section B task, who is the writer?',
+    [
+      'The Officer-in-Charge',
+      'A newspaper reporter',
+      'The Junior Member of Parliament for the local area',
+      'An unemployed youth',
+    ],
+    2,
+    'The assigned role is the Junior Member of Parliament; this controls the authority, tone and viewpoint of the letter.',
+  ),
+  Question(
+    'Paper 1',
+    'Which paragraph most effectively develops a supplied Section B point?',
+    [
+      'Youth unemployment.',
+      'Crime is bad and must stop.',
+      'Limited work opportunities leave some young people idle and vulnerable to criminal groups; skills programmes and local apprenticeships could reduce that risk.',
+      'There are many things to say about the area.',
+    ],
+    2,
+    'It explains the cause, then proposes a linked and practical response instead of merely copying the prompt.',
+  ),
   Question(
     'Paper 2',
     'Passage: “The match was postponed after rain flooded the pitch.” Why was the match postponed?',
@@ -1535,8 +1821,86 @@ class EmmaPrep extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       ),
     ),
-    home: supabaseReady ? const StudentAuthGate() : const Shell(),
+    home: const BrandedLaunch(),
   );
+}
+
+class BrandedLaunch extends StatefulWidget {
+  const BrandedLaunch({super.key});
+  @override
+  State<BrandedLaunch> createState() => _BrandedLaunchState();
+}
+
+class _BrandedLaunchState extends State<BrandedLaunch> {
+  bool ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(const Duration(milliseconds: 1400), () {
+      if (mounted) setState(() => ready = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (ready) return supabaseReady ? const StudentAuthGate() : const Shell();
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xff101a48), plum, coral],
+          ),
+        ),
+        child: const SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                OloidMark(size: 122),
+                SizedBox(height: 24),
+                Text(
+                  'EmmaPrep English',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                SizedBox(height: 30),
+                Text(
+                  'POWERED BY',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    letterSpacing: 2.4,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'TAKUNDA VITO',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    letterSpacing: 1.8,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  'takunda.vito.co.zw',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class StudentAuthGate extends StatefulWidget {
@@ -2054,6 +2418,29 @@ class Home extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 14),
+          Card(
+            child: ListTile(
+              contentPadding: const EdgeInsets.all(16),
+              leading: const CircleAvatar(
+                backgroundColor: coral,
+                foregroundColor: Colors.white,
+                child: Icon(Icons.flash_on_rounded),
+              ),
+              title: const Text(
+                '48-hour Paper 1 route',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              subtitle: const Text(
+                'Start with exact exam questions, timed plans and high-value writing decisions.',
+              ),
+              trailing: const Icon(Icons.arrow_forward_rounded),
+              onTap: () => Navigator.push(
+                c,
+                MaterialPageRoute(builder: (_) => CrashCoursePage(s)),
+              ),
+            ),
+          ),
           const SizedBox(height: 24),
           const Text(
             'Choose a paper',
@@ -2310,7 +2697,7 @@ class AccessibilityPage extends StatelessWidget {
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            Text('Version 1.6.1 (build 11)'),
+                            Text('Version 1.8.0 (build 13)'),
                           ],
                         ),
                       ),
@@ -2656,6 +3043,80 @@ class LessonTile extends StatelessWidget {
   );
 }
 
+class CrashCoursePage extends StatelessWidget {
+  final Store store;
+  const CrashCoursePage(this.store, {super.key});
+
+  static const lessonIds = [
+    'p1-exam-map-2024',
+    'p1-description-2024',
+    'p1-statement-story-2024',
+    'p1-argument-2024',
+    'p1-open-title-2024',
+    'p1-guided-letter-2024',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final route = lessonIds
+        .map((id) => lessons.firstWhere((lesson) => lesson.id == id))
+        .toList();
+    return Scaffold(
+      appBar: AppBar(title: const Text('48-hour Paper 1 route')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [plum, coral]),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: const Text(
+              'Day 1: learn the exam map, choose one Section A style and complete its timed plan.\n\nDay 2: master the compulsory Section B letter, write one full Section A answer and edit both against the checklists.',
+              style: TextStyle(
+                color: Colors.white,
+                height: 1.45,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Work in this order',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          ...route.asMap().entries.map(
+            (entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 15,
+                    backgroundColor: entry.value.color,
+                    foregroundColor: Colors.white,
+                    child: Text('${entry.key + 1}'),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: LessonTile(entry.value, store)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Rapid revision improves question choice, planning and accuracy, but marks still depend on completing timed writing and correcting mistakes.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, height: 1.4),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class PaperPage extends StatelessWidget {
   final String paper;
   final Store s;
@@ -2730,6 +3191,10 @@ class LessonPage extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(l.intro, style: const TextStyle(height: 1.5, fontSize: 16)),
+        if (modelAnswerFor(l) case final String answer) ...[
+          const SizedBox(height: 16),
+          ModelAnswerCard(answer),
+        ],
         if (s.simpleLanguage) ...[
           const SizedBox(height: 14),
           Container(
@@ -2844,6 +3309,53 @@ class LessonPage extends StatelessWidget {
   );
 }
 
+class ModelAnswerCard extends StatelessWidget {
+  final String answer;
+  const ModelAnswerCard(this.answer, {super.key});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: const Color(0xffe8f7ef),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: const Color(0xff4c9270), width: 1.4),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: const BoxDecoration(
+            color: Color(0xff32765a),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.workspace_premium_rounded, color: Colors.white),
+              SizedBox(width: 9),
+              Text(
+                'MODEL ANSWER',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: .9,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(17),
+          child: SelectableText(
+            answer,
+            style: const TextStyle(color: ink, height: 1.55, fontSize: 15.5),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class PracticalExampleCard extends StatelessWidget {
   final Lesson lesson;
   const PracticalExampleCard(this.lesson, {super.key});
@@ -2873,7 +3385,7 @@ class PracticalExampleCard extends StatelessWidget {
                 Icon(Icons.visibility_rounded, color: Colors.white),
                 SizedBox(width: 9),
                 Text(
-                  'SEE HOW IT WORKS',
+                  'EXAM QUESTION & APPROACH',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,

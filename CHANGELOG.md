@@ -2,6 +2,30 @@
 
 All notable changes to EmmaPrep English are recorded here. Versions follow `major.minor.patch+androidBuild`.
 
+## 1.8.0+13 - 2026-08-27
+
+### Added
+
+- Branded Flutter splash screen displaying the Takunda Vito logo, developer name and website.
+- Model answers appear before teaching notes in the key June 2024 Paper 1 lessons.
+- Model responses cover descriptive development, supplied-statement narrative, school-discipline argument, the open title and the compulsory formal letter.
+
+### Improved
+
+- Worked-example cards are labelled “Exam question & approach”, making the sequence model answer → method → explanation → learner practice explicit.
+
+## 1.7.0+12 - 2026-08-27
+
+### Added
+
+- Question-first June 2024 Paper 1 lessons covering the exam map, descriptive planning, supplied-statement stories, views/discussion, open titles and the compulsory guided letter.
+- A home-screen 48-hour Paper 1 route with an ordered rapid-revision schedule.
+- Eight exam-structure and task-decoding practice questions using the supplied June 2024 paper.
+
+### Improved
+
+- Lessons now begin from authentic examination task wording before teaching the related syllabus skill, planning method and timed practice.
+
 ## 1.6.1+11 - 2026-08-27
 
 ### Added

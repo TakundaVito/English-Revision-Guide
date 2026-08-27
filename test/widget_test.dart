@@ -49,6 +49,24 @@ void main() {
     expect(question.examStyle, 'zimsec-4005');
   });
 
+  test('key Paper 1 crash lessons include model answers', () {
+    const ids = {
+      'p1-description-2024',
+      'p1-statement-story-2024',
+      'p1-argument-2024',
+      'p1-open-title-2024',
+      'p1-guided-letter-2024',
+    };
+    for (final lesson in lessons.where((lesson) => ids.contains(lesson.id))) {
+      expect(modelAnswerFor(lesson), isNotNull, reason: lesson.id);
+      expect(
+        modelAnswerFor(lesson)!.length,
+        greaterThan(500),
+        reason: lesson.id,
+      );
+    }
+  });
+
   test('coach output never exposes hidden reasoning or markdown noise', () {
     final displayed = coachDisplayText(
       '<think>Private chain of thought</think>\n**Answer**\n- Read the command word.',
@@ -61,8 +79,14 @@ void main() {
 
   testWidgets('shows Emmaculate personalised home screen', (tester) async {
     await tester.pumpWidget(const EmmaPrep());
+    expect(find.text('POWERED BY'), findsOneWidget);
+    expect(find.text('TAKUNDA VITO'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1500));
     await tester.pumpAndSettle();
     expect(find.text('Emmaculate'), findsOneWidget);
+    expect(find.text('48-hour Paper 1 route'), findsOneWidget);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+    await tester.pumpAndSettle();
     expect(find.text('Paper 1'), findsOneWidget);
     expect(find.text('Paper 2'), findsOneWidget);
   });

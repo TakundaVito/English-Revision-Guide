@@ -2,7 +2,7 @@
 
 EmmaPrep English is a personalised Flutter revision app for Emmaculate, covering ZIMSEC English Language Paper 1 and Paper 2. Lessons, quizzes, progress and accessibility features work offline. The optional AI coach and content synchronization use a separately operated backend.
 
-Current version: **1.6.1+11**
+Current version: **1.8.0+13**
 
 ## Core capabilities
 
