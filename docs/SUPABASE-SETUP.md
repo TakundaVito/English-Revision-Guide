@@ -42,6 +42,7 @@ supabase functions deploy content
 supabase functions deploy chat
 supabase functions deploy health
 supabase functions deploy admin-create-student
+supabase functions deploy admin-students
 supabase functions deploy scan-questions
 ```
 

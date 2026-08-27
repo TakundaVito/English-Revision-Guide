@@ -19,13 +19,20 @@ Deno.serve(async (request) => {
   const email = String(body.email ?? '').trim().toLowerCase()
   const password = String(body.password ?? '')
   const displayName = String(body.displayName ?? 'Student').trim().slice(0, 80)
+  const personalEdition = body.personalEdition === true
   if (!email.includes('@') || password.length < 8 || displayName.length < 2) {
     return Response.json({ error: 'Valid name, email and an 8-character password are required' }, { status: 400, headers: cors })
   }
   const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
-  const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { display_name: displayName } })
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { display_name: displayName },
+    app_metadata: { personal_edition: personalEdition },
+  })
   if (error) { console.error(JSON.stringify({ event: 'admin_create_student_failed', requestId, code: error.code ?? 'auth_error' })); return Response.json({ error: error.message, requestId }, { status: 400, headers: cors }) }
-  await admin.from('audit_log').insert({ actor_id: user.id, action: 'create', entity_type: 'student_account', entity_id: data.user.id, details: { displayName } })
+  await admin.from('audit_log').insert({ actor_id: user.id, action: 'create', entity_type: 'student_account', entity_id: data.user.id, details: { displayName, personalEdition } })
   console.info(JSON.stringify({ event: 'admin_create_student_success', requestId, userId: data.user.id }))
   return Response.json({ ok: true, userId: data.user.id, email, displayName, requestId }, { headers: cors })
 })

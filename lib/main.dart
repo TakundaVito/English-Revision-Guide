@@ -19,10 +19,17 @@ const compiledApiBaseUrl = String.fromEnvironment('EMMAPREP_API_URL');
 const compiledAppToken = String.fromEnvironment('EMMAPREP_APP_TOKEN');
 const compiledSupabaseUrl = String.fromEnvironment('EMMAPREP_SUPABASE_URL');
 const compiledSupabaseKey = String.fromEnvironment('EMMAPREP_SUPABASE_KEY');
-const personalEdition = bool.fromEnvironment(
-  'EMMAPREP_PERSONAL_EDITION',
-  defaultValue: false,
-);
+bool get personalEdition {
+  if (!supabaseReady) return false;
+  return Supabase
+          .instance
+          .client
+          .auth
+          .currentUser
+          ?.appMetadata['personal_edition'] ==
+      true;
+}
+
 bool supabaseReady = false;
 
 String _encodeJpegDataUrl(Uint8List bytes) =>
@@ -80,7 +87,7 @@ Future<void> logStudentEvent(
       'source': 'student_app',
       'event_name': eventName,
       'level': level,
-      'app_version': '1.9.0',
+      'app_version': '1.10.0',
       'metadata': metadata,
     });
   } catch (error) {
@@ -2710,7 +2717,7 @@ class AccessibilityPage extends StatelessWidget {
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            Text('Version 1.9.0 (build 14)'),
+                            Text('Version 1.10.0 (build 15)'),
                           ],
                         ),
                       ),

@@ -19,7 +19,7 @@ Future<void> logAdminEvent(
       'source': 'admin_app',
       'event_name': eventName,
       'level': level,
-      'app_version': '1.5.0',
+      'app_version': '1.6.0',
       'metadata': metadata,
     });
   } catch (error) {
@@ -802,55 +802,72 @@ class UsersPage extends StatelessWidget {
   final int revision;
   final VoidCallback changed;
   const UsersPage({required this.revision, required this.changed, super.key});
-  Future<List<Map<String, dynamic>>> load() async =>
-      List<Map<String, dynamic>>.from(
-        await Supabase.instance.client
-            .from('student_profiles')
-            .select()
-            .order('created_at', ascending: false),
-      );
+  Future<List<Map<String, dynamic>>> load() async {
+    final response = await Supabase.instance.client.functions.invoke(
+      'admin-students',
+      body: {'action': 'list'},
+    );
+    if (response.status < 200 || response.status >= 300) {
+      throw FormatException(response.data.toString());
+    }
+    return List<Map<String, dynamic>>.from(response.data['students'] ?? []);
+  }
+
   Future<void> createStudent(BuildContext context) async {
     final name = TextEditingController(text: 'Emmaculate');
     final email = TextEditingController();
     final password = TextEditingController();
+    var privateExperience = true;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialog) => AlertDialog(
-        title: const Text('Create student credentials'),
-        content: SizedBox(
-          width: 520,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Field(name, 'Student name'),
-              Field(email, 'Email'),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: TextField(
-                  controller: password,
-                  obscureText: true,
-                  decoration: input(
-                    'Temporary password — at least 8 characters',
+      builder: (dialog) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Create student credentials'),
+          content: SizedBox(
+            width: 520,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Field(name, 'Student name'),
+                Field(email, 'Email'),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: TextField(
+                    controller: password,
+                    obscureText: true,
+                    decoration: input(
+                      'Temporary password — at least 8 characters',
+                    ),
                   ),
                 ),
-              ),
-              const Text(
-                'The account is confirmed immediately. Give the credentials only to the intended student and ask her to keep them private.',
-                style: TextStyle(fontSize: 12, height: 1.4),
-              ),
-            ],
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Private Emmaculate experience'),
+                  subtitle: const Text(
+                    'Shows her name and Takunda’s personal love notes. Enable only for her account.',
+                  ),
+                  value: privateExperience,
+                  onChanged: (value) =>
+                      setDialogState(() => privateExperience = value),
+                ),
+                const Text(
+                  'The account is confirmed immediately. Give the credentials only to the intended student and ask her to keep them private.',
+                  style: TextStyle(fontSize: 12, height: 1.4),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Create account'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialog, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialog, true),
-            child: const Text('Create account'),
-          ),
-        ],
       ),
     );
     if (confirmed != true || !context.mounted) return;
@@ -862,6 +879,7 @@ class UsersPage extends StatelessWidget {
           'displayName': name.text.trim(),
           'email': email.text.trim(),
           'password': password.text,
+          'personalEdition': privateExperience,
         },
       );
       if (response.status < 200 || response.status >= 300) {
@@ -891,6 +909,44 @@ class UsersPage extends StatelessWidget {
     }
   }
 
+  Future<void> setPrivateExperience(
+    BuildContext context,
+    Map<String, dynamic> student,
+    bool enabled,
+  ) async {
+    try {
+      final response = await Supabase.instance.client.functions.invoke(
+        'admin-students',
+        body: {
+          'action': 'update_personal_edition',
+          'userId': student['user_id'],
+          'enabled': enabled,
+        },
+      );
+      if (response.status < 200 || response.status >= 300) {
+        throw FormatException(response.data.toString());
+      }
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            enabled
+                ? 'Private experience enabled. Ask her to sign out and in once.'
+                : 'Private experience disabled for this account.',
+          ),
+        ),
+      );
+      changed();
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Account update failed: ${safeFunctionError(error)}'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(
     BuildContext context,
@@ -900,7 +956,7 @@ class UsersPage extends StatelessWidget {
     builder: (context, snapshot) => PageFrame(
       title: 'Student accounts',
       subtitle:
-          'Create Emmaculate’s credentials yourself. Public registration remains controlled in Settings.',
+          'One app serves every learner. Protected account metadata controls Emmaculate’s private experience.',
       action: FilledButton.icon(
         onPressed: () => createStudent(context),
         icon: const Icon(Icons.person_add_rounded),
@@ -922,7 +978,16 @@ class UsersPage extends StatelessWidget {
                     child: Icon(Icons.person_rounded),
                   ),
                   title: Text(row['display_name'].toString()),
-                  subtitle: Text('Created ${row['created_at']}'),
+                  subtitle: Text(
+                    row['personal_edition'] == true
+                        ? 'Private Emmaculate experience • Created ${row['created_at']}'
+                        : 'Public learner experience • Created ${row['created_at']}',
+                  ),
+                  trailing: Switch.adaptive(
+                    value: row['personal_edition'] == true,
+                    onChanged: (value) =>
+                        setPrivateExperience(context, row, value),
+                  ),
                 );
               },
             ),
@@ -1371,7 +1436,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 leading: Icon(Icons.admin_panel_settings_rounded),
                 title: Text('englishTutor'),
                 subtitle: Text(
-                  'Version 1.5.0 — Takunda Vito\ntakunda.vito.co.zw',
+                  'Version 1.6.0 — Takunda Vito\ntakunda.vito.co.zw',
                 ),
               ),
               const Text(

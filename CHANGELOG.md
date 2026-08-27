@@ -2,6 +2,18 @@
 
 All notable changes to EmmaPrep English are recorded here. Versions follow `major.minor.patch+androidBuild`.
 
+## 1.10.0+15 - 2026-08-27
+
+### Added
+
+- One account-aware APK for both Emmaculate and public learners.
+- Administrator-only private-experience controls in englishTutor for new and existing student accounts.
+
+### Security and privacy
+
+- Private relationship content is activated by protected Supabase `app_metadata`, not an email address, client-editable profile or APK build flag.
+- Public accounts remain generic and cannot enable the private experience themselves.
+
 ## 1.9.0+14 - 2026-08-27
 
 ### Added

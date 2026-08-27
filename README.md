@@ -1,8 +1,8 @@
 # EmmaPrep English
 
-EmmaPrep English is a Flutter revision app covering ZIMSEC English Language Paper 1 and Paper 2. Lessons, quizzes, progress and accessibility features work offline. The optional AI coach and content synchronization use a separately operated backend. One codebase produces a private Emmaculate edition and a public learner-safe edition.
+EmmaPrep English is a Flutter revision app covering ZIMSEC English Language Paper 1 and Paper 2. Lessons, quizzes, progress and accessibility features work offline. The optional AI coach and content synchronization use a separately operated backend. One APK serves both Emmaculate and public learners through protected account-based personalization.
 
-Current version: **1.9.0+14**
+Current version: **1.10.0+15**
 
 ## Core capabilities
 
@@ -36,21 +36,15 @@ Copy `config.example.json` to the ignored `config.production.json` and set only 
 
 Production Android signing uses the ignored `android/key.properties`, based on `android/key.properties.example`, and a keystore stored outside the repository. Local builds fall back to debug signing and must not be distributed as VI26 production releases.
 
-## Private and public editions
+## Account-based private experience
 
-The public edition is the secure default and excludes Emmaculate-specific love notes:
-
-```powershell
-flutter build apk --release --split-per-abi --dart-define-from-file=config.production.json --dart-define=EMMAPREP_PERSONAL_EDITION=false
-```
-
-Build the private wife edition explicitly:
+Build one APK:
 
 ```powershell
-flutter build apk --release --split-per-abi --dart-define-from-file=config.production.json --dart-define=EMMAPREP_PERSONAL_EDITION=true
+flutter build apk --release --split-per-abi --dart-define-from-file=config.production.json
 ```
 
-Do not distribute the private APK publicly. The Takunda Vito developer branding remains visible in both editions.
+In englishTutor, enable **Private Emmaculate experience** only on her account. The setting is stored in protected Supabase `app_metadata`, never in an email check, APK flag or user-editable profile. She must sign out and back in once after the setting changes so her refreshed session receives it. Every other account remains generic and never sees the relationship messages. The Takunda Vito developer branding remains visible to all learners.
 
 ## Smaller release APKs
 
@@ -62,7 +56,7 @@ flutter build apk --release --split-per-abi --dart-define-from-file=config.produ
 
 Supabase schema, Row Level Security policies and Edge Functions live under `supabase/`. The Flutter Web dashboard lives under `admin/` and is branded as **englishTutor**. Follow `docs/SUPABASE-SETUP.md` to install the migrations, create the first administrator, deploy the API and run the dashboard.
 
-The AI provider is selected remotely in englishTutor. API keys are never bundled into either Flutter app: store `OPENAI_API_KEY` or `GROQ_API_KEY` only in Supabase Edge Function Secrets. Apply migrations `202608260004_privacy_safe_events.sql` and `202608260005_ai_provider.sql`, then redeploy `admin-create-student`, `chat`, `scan-questions`, `health`, and `content`.
+The AI provider is selected remotely in englishTutor. API keys are never bundled into either Flutter app: store `OPENAI_API_KEY` or `GROQ_API_KEY` only in Supabase Edge Function Secrets. Apply migrations `202608260004_privacy_safe_events.sql` and `202608260005_ai_provider.sql`, then redeploy `admin-create-student`, `admin-students`, `chat`, `scan-questions`, `health`, and `content`.
 
 Identify a connected phone architecture with:
 
