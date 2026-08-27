@@ -1,4 +1,5 @@
 import 'package:emma_prep_english/main.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -64,5 +65,16 @@ void main() {
     expect(find.text('Emmaculate'), findsOneWidget);
     expect(find.text('Paper 1'), findsOneWidget);
     expect(find.text('Paper 2'), findsOneWidget);
+  });
+
+  testWidgets('shows a remotely supplied home notice', (tester) async {
+    final store = Store()
+      ..announcements.add({
+        'title': 'New practice available',
+        'message': 'Open Paper 2 to try the new questions.',
+      });
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Home(store))));
+    expect(find.text('New practice available'), findsOneWidget);
+    expect(find.text('Open Paper 2 to try the new questions.'), findsOneWidget);
   });
 }

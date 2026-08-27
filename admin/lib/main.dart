@@ -19,7 +19,7 @@ Future<void> logAdminEvent(
       'source': 'admin_app',
       'event_name': eventName,
       'level': level,
-      'app_version': '1.4.1',
+      'app_version': '1.5.0',
       'metadata': metadata,
     });
   } catch (error) {
@@ -290,6 +290,10 @@ class _AdminHomeState extends State<AdminHome> {
               label: Text('Releases'),
             ),
             NavigationRailDestination(
+              icon: Icon(Icons.campaign_rounded),
+              label: Text('Notices'),
+            ),
+            NavigationRailDestination(
               icon: Icon(Icons.people_rounded),
               label: Text('Users'),
             ),
@@ -317,8 +321,9 @@ class _AdminHomeState extends State<AdminHome> {
               changed: refresh,
             ),
             2 => ReleasesPage(revision: revision, changed: refresh),
-            3 => UsersPage(revision: revision, changed: refresh),
-            4 => ActivityPage(revision: revision),
+            3 => AnnouncementsPage(revision: revision, changed: refresh),
+            4 => UsersPage(revision: revision, changed: refresh),
+            5 => ActivityPage(revision: revision),
             _ => SettingsPage(revision: revision, changed: refresh),
           },
         ),
@@ -329,6 +334,133 @@ class _AdminHomeState extends State<AdminHome> {
 }
 
 enum RecordKind { lesson, question }
+
+class AnnouncementsPage extends StatelessWidget {
+  final int revision;
+  final VoidCallback changed;
+  const AnnouncementsPage({
+    required this.revision,
+    required this.changed,
+    super.key,
+  });
+
+  Future<List<Map<String, dynamic>>> load() async =>
+      List<Map<String, dynamic>>.from(
+        await Supabase.instance.client
+            .from('announcements')
+            .select()
+            .order('created_at', ascending: false),
+      );
+
+  Future<void> edit(BuildContext context, [Map<String, dynamic>? row]) async {
+    final title = TextEditingController(text: row?['title']?.toString());
+    final message = TextEditingController(text: row?['message']?.toString());
+    var enabled = row?['enabled'] as bool? ?? true;
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(row == null ? 'New home notice' : 'Edit home notice'),
+          content: SizedBox(
+            width: 620,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Field(title, 'Title', hint: 'New revision material'),
+                Field(
+                  message,
+                  'Message shown on the student home page',
+                  lines: 5,
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Show in the mobile app'),
+                  value: enabled,
+                  onChanged: (value) => setDialogState(() => enabled = value),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton.icon(
+              onPressed: () async {
+                final values = {
+                  'title': title.text.trim(),
+                  'message': message.text.trim(),
+                  'enabled': enabled,
+                  'created_by': Supabase.instance.client.auth.currentUser!.id,
+                };
+                if (values['title'].toString().isEmpty ||
+                    values['message'].toString().isEmpty) {
+                  return;
+                }
+                final query = Supabase.instance.client.from('announcements');
+                if (row == null) {
+                  await query.insert(values);
+                } else {
+                  values.remove('created_by');
+                  await query.update(values).eq('id', row['id']);
+                }
+                if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+              },
+              icon: const Icon(Icons.save_rounded),
+              label: const Text('Save notice'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (saved == true) changed();
+  }
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) => FutureBuilder<List<Map<String, dynamic>>>(
+    key: ValueKey('announcements-$revision'),
+    future: load(),
+    builder: (context, snapshot) => PageFrame(
+      title: 'Mobile home notices',
+      subtitle:
+          'Publish important messages that appear when the student app refreshes.',
+      action: FilledButton.icon(
+        onPressed: () => edit(context),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('New notice'),
+      ),
+      child: snapshot.hasError
+          ? ErrorText(snapshot.error)
+          : !snapshot.hasData
+          ? const Center(child: CircularProgressIndicator())
+          : snapshot.data!.isEmpty
+          ? const Center(child: Text('No mobile notices yet.'))
+          : ListView.separated(
+              itemCount: snapshot.data!.length,
+              separatorBuilder: (_, _) => const Divider(),
+              itemBuilder: (context, index) {
+                final row = snapshot.data![index];
+                return ListTile(
+                  leading: Icon(
+                    row['enabled'] == true
+                        ? Icons.campaign_rounded
+                        : Icons.visibility_off_rounded,
+                  ),
+                  title: Text(row['title'].toString()),
+                  subtitle: Text(row['message'].toString()),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit_rounded),
+                    onPressed: () => edit(context, row),
+                  ),
+                );
+              },
+            ),
+    ),
+  );
+}
 
 class RecordsPage extends StatelessWidget {
   final RecordKind kind;
@@ -1239,7 +1371,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 leading: Icon(Icons.admin_panel_settings_rounded),
                 title: Text('englishTutor'),
                 subtitle: Text(
-                  'Version 1.4.1 — Takunda Vito\ntakunda.vito.co.zw',
+                  'Version 1.5.0 — Takunda Vito\ntakunda.vito.co.zw',
                 ),
               ),
               const Text(

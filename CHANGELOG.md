@@ -2,6 +2,30 @@
 
 All notable changes to EmmaPrep English are recorded here. Versions follow `major.minor.patch+androidBuild`.
 
+## 1.6.1+11 - 2026-08-27
+
+### Added
+
+- Five practical Paper 2 lessons derived from recurring ZIMSEC question patterns: direct retrieval, reference words, contextual vocabulary, word choice and summary-grid writing.
+- Eight original practice questions targeting the same examination skills and common answer mistakes.
+
+### Content safety
+
+- Source passages are not reproduced; lessons use fresh examples while preserving the tested skill.
+- Unrelated identity-document imagery is excluded from learning content.
+
+## 1.6.0+10 - 2026-08-27
+
+### Added
+
+- Server-driven home notices managed from the englishTutor dashboard.
+- Remote Coach and scanner visibility controls delivered with content updates.
+
+### Improved
+
+- Content cache identifiers now change when notices or safe remote settings change.
+- Lessons, questions, notices and feature controls refresh automatically when the app opens.
+
 ## 1.5.3+9 - 2026-08-26
 
 ### Fixed

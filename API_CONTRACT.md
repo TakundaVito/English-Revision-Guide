@@ -83,7 +83,7 @@ Response:
 
 The app requests this endpoint automatically during launch. An `ETag` response header is recommended; later requests include `If-None-Match`, allowing the server to return `304 Not Modified`. Users do not configure or manually trigger the pipeline.
 
-The response may also include an `appConfig` object containing safe public controls such as `minimum_version`, `maintenance_notice` and `content_cache_seconds`. Unknown fields are ignored by older app releases.
+The response may also include an `appConfig` object containing safe public controls such as `minimum_version`, `maintenance_notice`, `content_cache_seconds`, `ai_enabled` and `question_scanner_enabled`, plus an `announcements` array for server-driven home notices. The ETag changes when content, notices or these public controls change. Unknown fields are ignored by older app releases.
 
 ## Administrator health
 

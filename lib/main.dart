@@ -73,7 +73,7 @@ Future<void> logStudentEvent(
       'source': 'student_app',
       'event_name': eventName,
       'level': level,
-      'app_version': '1.5.3',
+      'app_version': '1.6.1',
       'metadata': metadata,
     });
   } catch (error) {
@@ -222,6 +222,36 @@ class Lesson {
         'Task: “As head prefect, write a speech advising new learners about study habits.”\nRole: head prefect. Audience: new learners. Purpose: advise. Content: practical study habits. Tone: friendly, confident and responsible.',
     task:
         'Decode this task: “Write a letter to your council complaining about unsafe roads near your school.” Identify role, audience, purpose and content.',
+  ),
+  'paper2-direct-retrieval' => (
+    worked:
+        'Passage: “After the bridge collapsed, villagers used the longer northern road.”\nQuestion: Why did the villagers use the northern road?\nAnswer: Because the bridge had collapsed.\n\nThe answer gives the stated cause directly. It does not add an unsupported opinion.',
+    task:
+        'Passage: “The clinic closed early when its generator stopped.” Why did the clinic close early? Answer in one precise sentence.',
+  ),
+  'paper2-reference-words' => (
+    worked:
+        'Sentence: “Rudo carried the injured bird home and placed it in a box.”\nQuestion: What does “it” refer to?\nAnswer: The injured bird.\n\nReplace the reference word with your answer. “Rudo placed the injured bird in a box” still makes sense.',
+    task:
+        'Sentence: “The driver handed Tariro the receipt, but she immediately lost it.” What does “it” refer to?',
+  ),
+  'paper2-context-vocabulary' => (
+    worked:
+        'Sentence: “The guard scrutinised every identity card before opening the gate.”\nMeaning: examined carefully.\n\n“Looked” is too weak because it misses the idea of careful attention.',
+    task:
+        'In “The child peered through the dusty window,” give a short phrase that means the same as “peered” in this context.',
+  ),
+  'paper2-word-choice' => (
+    worked:
+        'Sentence: “A tiny figure crawled across the enormous field.”\nQuestion: Why use “tiny”?\nAnswer: It emphasises how small and vulnerable the figure looked against the wide field.\n\nDo not answer only “because it was small”; explain the picture or effect.',
+    task:
+        'Why might a writer call a moving person “a speck” when viewed from high above? Give the contextual effect.',
+  ),
+  'paper2-summary-grid' => (
+    worked:
+        'Focus: actions taken by a lost traveller.\nRaw details: “He nervously shouted again and again. He climbed a tall rock. He waved his red shirt.”\nGrid notes: shouted repeatedly | climbed rock | waved shirt\nContinuous version: “He repeatedly called for help, climbed a rock and waved his shirt.”\n\nThe final sentence keeps three actions but removes decoration.',
+    task:
+        'Turn these into concise summary points: “She quickly tied the rope; she pulled the canoe ashore; she repeatedly checked it for damage.”',
   ),
   _ => (
     worked:
@@ -578,6 +608,116 @@ const lessons = <Lesson>[
       'Every prompt planned',
     ],
   ),
+  Lesson(
+    'paper2-direct-retrieval',
+    'Paper 2',
+    'Direct Answers from the Passage',
+    'Find the fact and match the question word',
+    'Typical comprehension questions often ask what, why, where or how. A short answer earns the mark only when it includes the exact fact requested.',
+    Icons.travel_explore_rounded,
+    Color(0xff2f72b7),
+    [
+      'Use the paragraph reference to locate the answer, but read the sentence before and after it too.',
+      'Match the question word: why needs a reason; how needs manner; what needs the named fact or action.',
+      'Lift only when own words are not required, and never copy a whole paragraph.',
+      'For one mark, give one complete point without an unnecessary story.',
+      'Check that your answer can follow the wording of the question naturally.',
+    ],
+    [
+      'Correct paragraph used',
+      'Question word answered',
+      'One complete point given',
+      'No unsupported detail added',
+    ],
+  ),
+  Lesson(
+    'paper2-reference-words',
+    'Paper 2',
+    'Reference Words and Phrases',
+    'Work out who or what a phrase identifies',
+    'Questions such as “What does this refer to?” test whether you can follow people, animals, objects and ideas through a passage.',
+    Icons.alt_route_rounded,
+    Color(0xff4f6bb3),
+    [
+      'Spot the reference word or phrase: it, this, that, they, its passenger or the victim.',
+      'Look backwards for the nearest noun that matches the meaning and grammar.',
+      'Substitute your answer into the sentence; the sentence should still make sense.',
+      'Give the precise noun, not a vague answer such as “the thing” or the wrong character.',
+      'Use the surrounding action to decide between two possible nouns.',
+    ],
+    [
+      'Reference expression identified',
+      'Matching noun located',
+      'Substitution makes sense',
+      'Answer is precise',
+    ],
+  ),
+  Lesson(
+    'paper2-context-vocabulary',
+    'Paper 2',
+    'Vocabulary in Context',
+    'Replace a word without changing its meaning',
+    'The familiar word may not be the correct synonym. ZIMSEC-style vocabulary questions reward the meaning the word has in that particular sentence.',
+    Icons.manage_search_rounded,
+    Color(0xff7b5ca8),
+    [
+      'Read the complete sentence and picture the action before suggesting a synonym.',
+      'Match the part of speech: replace a verb with a verb and an adverb with an adverb.',
+      'Test your replacement inside the original sentence.',
+      'Keep every important shade of meaning: “scrutinised” means examined carefully, not merely saw.',
+      'Give one word or a short phrase when that is what the instruction requests.',
+    ],
+    [
+      'Context read first',
+      'Part of speech matches',
+      'Important meaning preserved',
+      'Response length follows instruction',
+    ],
+  ),
+  Lesson(
+    'paper2-word-choice',
+    'Paper 2',
+    'Why the Writer Chose That Word',
+    'Explain the picture, scale or feeling created',
+    'A word-choice question is not answered by repeating the word. Explain what it helps the reader see, feel or understand in that moment.',
+    Icons.auto_awesome_rounded,
+    Color(0xffad5a86),
+    [
+      'Give the simple contextual meaning first.',
+      'Then explain the extra picture, contrast, attitude or emotion created.',
+      'Relate the effect to the scene—for example, distance can make a large object look tiny.',
+      'Avoid circular answers such as “speck is used because it was a speck”.',
+      'Use the pattern: word → contextual meaning → effect on the scene.',
+    ],
+    [
+      'Meaning explained',
+      'Effect goes beyond repetition',
+      'Answer fits the scene',
+      'No technique-only answer',
+    ],
+  ),
+  Lesson(
+    'paper2-summary-grid',
+    'Paper 2',
+    'Summary Grid to Continuous Writing',
+    'Select actions, count accurately and join them',
+    'A grid helps control the word count, but the final response must be clear continuous writing that keeps only the requested actions, feelings, causes or effects.',
+    Icons.grid_on_rounded,
+    Color(0xff6a5aa8),
+    [
+      'Underline the summary focus and starting and ending paragraphs.',
+      'Write one useful word in each grid cell; a hyphenated expression counts according to the paper instruction.',
+      'Select distinct points before worrying about elegant sentences.',
+      'Remove examples, description and repeated actions, but keep details that change meaning.',
+      'Join points into grammatical prose, then recount and stay within the stated limit.',
+    ],
+    [
+      'Focus and paragraph range correct',
+      'Points are distinct and relevant',
+      'Continuous writing is grammatical',
+      'Words counted and limit respected',
+    ],
+  ),
 ];
 
 class Question {
@@ -614,6 +754,92 @@ class Question {
 }
 
 const bank = <Question>[
+  Question(
+    'Paper 2',
+    'Passage: “The match was postponed after rain flooded the pitch.” Why was the match postponed?',
+    [
+      'The pitch had been flooded by rain',
+      'The players arrived late',
+      'The crowd was too large',
+      'The referee lost the ball',
+    ],
+    0,
+    '“Why” asks for the cause. The passage directly states that rain flooded the pitch.',
+  ),
+  Question(
+    'Paper 2',
+    'Sentence: “Nyasha found the missing file and immediately gave it to the clerk.” What does “it” refer to?',
+    ['Nyasha', 'The missing file', 'The clerk', 'The office'],
+    1,
+    'Replace “it” with “the missing file”: the resulting sentence is logical and grammatical.',
+  ),
+  Question(
+    'Paper 2',
+    'In “The inspector scrutinised the damaged wall,” which replacement best preserves “scrutinised”?',
+    ['glanced at', 'examined carefully', 'walked past', 'repaired quickly'],
+    1,
+    '“Scrutinised” means examined very carefully; “glanced” loses the careful attention.',
+  ),
+  Question(
+    'Paper 2',
+    'A writer calls a distant bus “a yellow speck on the road.” What does “speck” emphasise?',
+    [
+      'The bus was dirty',
+      'The bus looked very small because it was far away',
+      'The road was yellow',
+      'The bus was travelling slowly',
+    ],
+    1,
+    'A speck is a very small visible mark. In context, the word creates a strong sense of distance and scale.',
+  ),
+  Question(
+    'Paper 2',
+    'Which is the best own-words version of “The frightened child clung tenaciously to the rail”?',
+    [
+      'The scared child held the rail very firmly',
+      'The child touched the rail',
+      'The angry child broke the rail',
+      'The child stood near the rail',
+    ],
+    0,
+    '“Frightened” becomes “scared” and “clung tenaciously” becomes “held very firmly”; the full meaning remains.',
+  ),
+  Question(
+    'Paper 2',
+    'The summary focus is “actions used to attract rescuers”. Which detail should be excluded?',
+    [
+      'She waved a bright cloth',
+      'She shouted repeatedly',
+      'She lit a smoky fire',
+      'The mountain looked beautiful at sunset',
+    ],
+    3,
+    'The sunset description is not an action used to attract rescuers, so it does not match the focus.',
+  ),
+  Question(
+    'Paper 2',
+    'Which summary sentence is most concise without losing the three actions?',
+    [
+      'He called and called loudly, and after that he then climbed up onto a rock and waved.',
+      'He repeatedly called for help, climbed a rock and waved.',
+      'There was calling, and the rock was climbed by him before waving happened.',
+      'He was on a rock that was quite tall and it was a difficult situation.',
+    ],
+    1,
+    'It preserves calling, climbing and waving in clear continuous writing without repetition or decoration.',
+  ),
+  Question(
+    'Paper 2',
+    'Question: “How did the injured runner cross the finish line?” Which answer is complete?',
+    [
+      'The runner crossed the finish line',
+      'The runner crossed',
+      'The injured runner limped slowly across the finish line',
+      'At the finish line',
+    ],
+    2,
+    '“How” requires the manner. “Limped slowly” supplies the precise detail the other answers omit.',
+  ),
   Question(
     'Paper 1',
     'Which opening best suits a formal report?',
@@ -918,11 +1144,15 @@ class Store extends ChangeNotifier {
   final personalLessons = <Lesson>[];
   final personalQuestions = <Question>[];
   final scannedBatches = <Map<String, dynamic>>[];
+  final announcements = <Map<String, dynamic>>[];
   int correct = 0, attempted = 0, streak = 0;
   bool darkMode = false,
       highContrast = false,
       reducedMotion = false,
-      simpleLanguage = true;
+      simpleLanguage = true,
+      remoteCoachEnabled = true,
+      remoteScannerEnabled = true;
+  String maintenanceNotice = '';
   double textScale = 1.0;
   String last = '', contentVersion = 'Bundled 1.2', contentEtag = '';
   final String apiBaseUrl = compiledApiBaseUrl;
@@ -1207,12 +1437,27 @@ class Store extends ChangeNotifier {
       final parsedQuestions = (data['questions'] as List? ?? [])
           .map((e) => Question.fromJson(Map<String, dynamic>.from(e)))
           .toList();
+      final parsedAnnouncements = List<Map<String, dynamic>>.from(
+        (data['announcements'] as List? ?? []).map(
+          (e) => Map<String, dynamic>.from(e),
+        ),
+      );
+      final appConfig = Map<String, dynamic>.from(
+        data['appConfig'] as Map? ?? const {},
+      );
       remoteLessons
         ..clear()
         ..addAll(parsedLessons);
       remoteQuestions
         ..clear()
         ..addAll(parsedQuestions);
+      announcements
+        ..clear()
+        ..addAll(parsedAnnouncements);
+      maintenanceNotice = appConfig['maintenance_notice']?.toString() ?? '';
+      remoteCoachEnabled = appConfig['ai_enabled'] as bool? ?? true;
+      remoteScannerEnabled =
+          appConfig['question_scanner_enabled'] as bool? ?? true;
       return true;
     } catch (_) {
       return false;
@@ -1249,6 +1494,8 @@ class Store extends ChangeNotifier {
       final payload = jsonEncode({
         'lessons': data['lessons'] ?? [],
         'questions': data['questions'] ?? [],
+        'announcements': data['announcements'] ?? [],
+        'appConfig': data['appConfig'] ?? {},
       });
       if (!_decodeContent(payload)) {
         return 'Update rejected: invalid ZIMSEC content.';
@@ -1740,6 +1987,24 @@ class Home extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 22),
+          if (s.maintenanceNotice.isNotEmpty) ...[
+            RemoteNoticeCard(
+              title: 'Service notice',
+              message: s.maintenanceNotice,
+              icon: Icons.info_rounded,
+            ),
+            const SizedBox(height: 12),
+          ],
+          ...s.announcements.map(
+            (notice) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: RemoteNoticeCard(
+                title: notice['title']?.toString() ?? 'EmmaPrep update',
+                message: notice['message']?.toString() ?? '',
+                icon: Icons.campaign_rounded,
+              ),
+            ),
+          ),
           Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
@@ -2045,7 +2310,7 @@ class AccessibilityPage extends StatelessWidget {
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            Text('Version 1.5.3 (build 9)'),
+                            Text('Version 1.6.1 (build 11)'),
                           ],
                         ),
                       ),
@@ -2665,16 +2930,17 @@ class Practice extends StatelessWidget {
         ),
         const Text('Only Paper 1 and Paper 2 exam-skill questions.'),
         const SizedBox(height: 22),
-        Drill(
-          'Scan questions',
-          'Photograph one or several questions, get explanations, then add them to Study and Practice.',
-          Icons.document_scanner_rounded,
-          plum,
-          () => Navigator.push(
-            c,
-            MaterialPageRoute(builder: (_) => QuestionScannerPage(s)),
+        if (s.remoteScannerEnabled)
+          Drill(
+            'Scan questions',
+            'Photograph one or several questions, get explanations, then add them to Study and Practice.',
+            Icons.document_scanner_rounded,
+            plum,
+            () => Navigator.push(
+              c,
+              MaterialPageRoute(builder: (_) => QuestionScannerPage(s)),
+            ),
           ),
-        ),
         Drill(
           'Mixed exam check',
           'Five ZIMSEC 4005 skill questions.',
@@ -2994,6 +3260,31 @@ class _QuestionScannerPageState extends State<QuestionScannerPage> {
           ),
         ],
       ],
+    ),
+  );
+}
+
+class RemoteNoticeCard extends StatelessWidget {
+  final String title, message;
+  final IconData icon;
+  const RemoteNoticeCard({
+    required this.title,
+    required this.message,
+    required this.icon,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) => Card(
+    color: coral.withValues(alpha: .12),
+    child: ListTile(
+      leading: CircleAvatar(
+        backgroundColor: coral,
+        foregroundColor: Colors.white,
+        child: Icon(icon),
+      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+      subtitle: Text(message, style: const TextStyle(height: 1.4)),
     ),
   );
 }
