@@ -35,6 +35,11 @@ jobs:
           flutter analyze --fatal-infos 2>&1 | tee student-analyze.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
+            diagnostic=$(tail -c 6000 student-analyze.log)
+            diagnostic=${diagnostic//'%'/'%25'}
+            diagnostic=${diagnostic//$'\r'/'%0D'}
+            diagnostic=${diagnostic//$'\n'/'%0A'}
+            echo "::error title=Flutter analyzer output::$diagnostic"
             {
               echo '## Student analyzer failure'
               echo '```text'
