@@ -131,7 +131,21 @@ jobs:
         run: flutter doctor -v
       - name: Run VI26 automated release gates
         shell: pwsh
-        run: ./scripts/verify-release.ps1
+        run: |
+          try {
+            ./scripts/verify-release.ps1
+          } catch {
+            $evidencePath = 'docs/verification/latest.json'
+            $diagnostic = if (Test-Path -LiteralPath $evidencePath) {
+              $evidence = Get-Content -Raw -LiteralPath $evidencePath | ConvertFrom-Json
+              "$(($evidence.failure ?? $_.Exception.Message))"
+            } else {
+              $_.Exception.Message
+            }
+            $diagnostic = $diagnostic.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Output "::error title=VI26 verifier failure::$diagnostic"
+            throw
+          }
       - name: Upload verification evidence and APKs
         if: always()
         uses: actions/upload-artifact@v7
