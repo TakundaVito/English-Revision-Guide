@@ -200,6 +200,7 @@ try {
     Write-Host "[VI26] Evidence written to $evidencePath"
 }
 
-if ($overall -ne "pass") { exit 1 }
+if ($overall -ne "pass") {
+    throw "VI26 automated gates failed: $failureMessage"
+}
 Write-Host "`n[VI26] Automated gates passed." -ForegroundColor Green
-exit 0
