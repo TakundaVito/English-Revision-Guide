@@ -19,6 +19,12 @@ const compiledApiBaseUrl = String.fromEnvironment('EMMAPREP_API_URL');
 const compiledAppToken = String.fromEnvironment('EMMAPREP_APP_TOKEN');
 const compiledSupabaseUrl = String.fromEnvironment('EMMAPREP_SUPABASE_URL');
 const compiledSupabaseKey = String.fromEnvironment('EMMAPREP_SUPABASE_KEY');
+const companyEvaluationMode = bool.fromEnvironment('EMMAPREP_EVALUATION_MODE');
+const evaluatorName = String.fromEnvironment(
+  'EMMAPREP_EVALUATOR_NAME',
+  defaultValue: 'Prospective partner',
+);
+const evaluationFeedbackUrl = String.fromEnvironment('EMMAPREP_FEEDBACK_URL');
 bool get personalEdition {
   if (!supabaseReady) return false;
   return Supabase
@@ -1255,7 +1261,7 @@ const bank = <Question>[
       'Emma said “I am ready”.',
       'Emma said, “I am ready.”',
       'Emma, said “I am ready.”',
-      'Emma said “I am ready”.',
+      'Emma said “I am ready.”',
     ],
     1,
     'The reporting clause takes a comma; final punctuation stays inside the quotation.',
@@ -2367,6 +2373,10 @@ class Home extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 22),
+          if (companyEvaluationMode) ...[
+            EvaluationBanner(s),
+            const SizedBox(height: 14),
+          ],
           if (s.maintenanceNotice.isNotEmpty) ...[
             RemoteNoticeCard(
               title: 'Service notice',
@@ -2565,6 +2575,126 @@ class Home extends StatelessWidget {
       ),
     );
   }
+}
+
+class EvaluationBanner extends StatelessWidget {
+  final Store store;
+  const EvaluationBanner(this.store, {super.key});
+
+  @override
+  Widget build(BuildContext context) => Card(
+    color: const Color(0xfffff0c7),
+    child: ListTile(
+      contentPadding: const EdgeInsets.all(16),
+      leading: const CircleAvatar(
+        backgroundColor: Color(0xffffc56e),
+        foregroundColor: ink,
+        child: Icon(Icons.business_center_rounded),
+      ),
+      title: const Text(
+        'COMPANY EVALUATION BUILD',
+        style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: .6),
+      ),
+      subtitle: Text(
+        'Prepared for $evaluatorName. Uses demonstration data and does not require a student account.',
+      ),
+      trailing: const Icon(Icons.arrow_forward_rounded),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => EvaluationGuidePage(store)),
+      ),
+    ),
+  );
+}
+
+class EvaluationGuidePage extends StatelessWidget {
+  final Store store;
+  const EvaluationGuidePage(this.store, {super.key});
+
+  static const checks = <(IconData, String, String)>[
+    (
+      Icons.menu_book_rounded,
+      'Review the curriculum',
+      'Open lessons in Paper 1 and Paper 2 and inspect the examples and learner checklists.',
+    ),
+    (
+      Icons.quiz_rounded,
+      'Complete a quiz',
+      'Answer a mixture of questions and review the score and explanations.',
+    ),
+    (
+      Icons.offline_bolt_rounded,
+      'Test offline use',
+      'Turn off connectivity and confirm that bundled lessons and quizzes remain available.',
+    ),
+    (
+      Icons.accessibility_new_rounded,
+      'Check accessibility',
+      'Try large text, high contrast, dark mode and reduced motion.',
+    ),
+    (
+      Icons.insights_rounded,
+      'Inspect progress tracking',
+      'Complete and bookmark lessons, then reopen the app to confirm local persistence.',
+    ),
+  ];
+
+  Future<void> _openFeedback() async {
+    if (evaluationFeedbackUrl.isEmpty) return;
+    await launchUrl(
+      Uri.parse(evaluationFeedbackUrl),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Company evaluation')),
+    body: ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Text(
+          'Welcome, $evaluatorName',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'This evaluation build is designed for product review. It contains demonstration content, stores progress only on this device, and must not be used with real student information.',
+          style: TextStyle(height: 1.45),
+        ),
+        const SizedBox(height: 20),
+        ...checks.map(
+          (check) => Card(
+            child: ListTile(
+              contentPadding: const EdgeInsets.all(14),
+              leading: CircleAvatar(child: Icon(check.$1)),
+              title: Text(
+                check.$2,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              subtitle: Text(check.$3),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: () => Navigator.maybePop(context),
+          icon: const Icon(Icons.play_arrow_rounded),
+          label: const Text('Start evaluating'),
+        ),
+        if (evaluationFeedbackUrl.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: _openFeedback,
+            icon: const Icon(Icons.rate_review_rounded),
+            label: const Text('Send evaluation feedback'),
+          ),
+        ],
+      ],
+    ),
+  );
 }
 
 class AccessibilityPage extends StatelessWidget {
@@ -2890,7 +3020,9 @@ class PaperCard extends StatelessWidget {
     ),
     borderRadius: BorderRadius.circular(24),
     child: Container(
-      height: 190,
+      // Leave enough vertical room for two-line subtitles on narrow phones.
+      // A shorter fixed height caused the card's Column to overflow at 360 px.
+      height: 228,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: color,

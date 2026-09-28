@@ -24,6 +24,16 @@ flutter test
 flutter run
 ```
 
+The automated suite is divided into curriculum-integrity, persistence,
+student-widget, accessibility, and admin schemes. See
+[`docs/TESTING.md`](docs/TESTING.md) for the test matrix, commands, and physical
+device release checklist.
+
+For a credential-free build that a school, publisher, or prospective buyer can
+evaluate, use `config.company-demo.json`. See
+[`docs/COMPANY-EVALUATION.md`](docs/COMPANY-EVALUATION.md) for packaging and
+pilot instructions.
+
 For Chrome:
 
 ```powershell
