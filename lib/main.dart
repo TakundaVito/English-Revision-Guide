@@ -11,6 +11,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'services/coach_text.dart';
+
+export 'services/coach_text.dart';
+
 const plum = Color(0xff2854c7),
     coral = Color(0xffff5f9e),
     cream = Color(0xfffff7fb),
@@ -48,23 +52,6 @@ String signedInStudentInitial() {
 }
 
 String learnerDisplayName() => signedInStudentName();
-
-String coachDisplayText(String raw) {
-  var text = raw
-      .replaceAll(RegExp(r'<think>[\s\S]*?</think>', caseSensitive: false), '')
-      .replaceAll(r'\n', '\n')
-      .replaceAll(RegExp(r'```(?:markdown|text)?', caseSensitive: false), '')
-      .trim();
-  text = text
-      .split('\n')
-      .map((line) {
-        var cleaned = line.replaceFirst(RegExp(r'^\s*#{1,6}\s*'), '');
-        cleaned = cleaned.replaceFirst(RegExp(r'^\s*[-*]\s+'), '• ');
-        return cleaned.replaceAll('**', '').replaceAll('__', '');
-      })
-      .join('\n');
-  return text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-}
 
 Future<void> logStudentEvent(
   String eventName, {

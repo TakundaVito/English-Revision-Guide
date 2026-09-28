@@ -34,6 +34,11 @@ evaluate, use `config.company-demo.json`. See
 [`docs/COMPANY-EVALUATION.md`](docs/COMPANY-EVALUATION.md) for packaging and
 pilot instructions.
 
+For acquisition or licensing review, see
+[`docs/BUYER-DUE-DILIGENCE.md`](docs/BUYER-DUE-DILIGENCE.md). It distinguishes
+verified engineering evidence from curriculum, legal, security, pilot, and
+release evidence that must be supplied by the responsible human reviewer.
+
 For Chrome:
 
 ```powershell
