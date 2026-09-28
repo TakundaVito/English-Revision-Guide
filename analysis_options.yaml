@@ -9,6 +9,12 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+# The administrator dashboard is a separate Flutter package with its own
+# analysis options and dedicated CI gate.
+analyzer:
+  exclude:
+    - admin/**
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`
