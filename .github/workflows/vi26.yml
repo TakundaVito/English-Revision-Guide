@@ -113,7 +113,7 @@ jobs:
         run: npm audit --audit-level=high
 
   release-verify:
-    name: Windows release verification
+    name: Windows repository verification
     needs: [flutter-quality, backend-quality]
     runs-on: windows-latest
     timeout-minutes: 45
@@ -133,7 +133,7 @@ jobs:
         shell: pwsh
         run: |
           try {
-            ./scripts/verify-release.ps1
+            ./scripts/verify-release.ps1 -SkipApk
           } catch {
             $evidencePath = 'docs/verification/latest.json'
             $diagnostic = if (Test-Path -LiteralPath $evidencePath) {
@@ -154,5 +154,40 @@ jobs:
           if-no-files-found: warn
           path: |
             docs/verification/latest.json
+          retention-days: 30
+
+  android-release:
+    name: Android release APK build
+    needs: [flutter-quality, backend-quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v7
+      - name: Configure Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Configure Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.2"
+          channel: stable
+          cache: true
+      - name: Resolve locked dependencies
+        run: flutter pub get
+      - name: Build split release APKs
+        run: flutter build apk --release --split-per-abi
+      - name: Record APK checksums
+        shell: bash
+        run: sha256sum build/app/outputs/flutter-apk/*-release.apk | tee build/app/outputs/flutter-apk/SHA256SUMS.txt
+      - name: Upload release APKs and checksums
+        uses: actions/upload-artifact@v7
+        with:
+          name: emmaprep-android-${{ github.sha }}
+          if-no-files-found: error
+          path: |
             build/app/outputs/flutter-apk/*-release.apk
+            build/app/outputs/flutter-apk/SHA256SUMS.txt
           retention-days: 30
