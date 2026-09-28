@@ -1,4 +1,4 @@
-name: VI26 release gates
+name: EmmaPrep quality and release gates
 
 on:
   push:
@@ -11,28 +11,109 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    runs-on: windows-latest
-    timeout-minutes: 45
+  flutter-quality:
+    name: Flutter analysis, tests, and coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout exact revision
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@v5
       - name: Configure Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.44.2"
           channel: stable
           cache: true
+      - name: Resolve student dependencies
+        run: flutter pub get
+      - name: Check student formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Analyze student app
+        run: flutter analyze --fatal-infos
+      - name: Test student app with coverage
+        run: flutter test --coverage --reporter expanded
+      - name: Enforce 40 percent line coverage floor
+        shell: bash
+        run: |
+          awk -F: '
+            /^LF:/ { total += $2 }
+            /^LH:/ { hit += $2 }
+            END {
+              if (total == 0) { print "No coverage lines found"; exit 1 }
+              pct = (100 * hit / total)
+              printf "Student line coverage: %.1f%% (%d/%d)\n", pct, hit, total
+              if (pct < 40) exit 1
+            }
+          ' coverage/lcov.info
+      - name: Resolve admin dependencies
+        working-directory: admin
+        run: flutter pub get
+      - name: Check admin formatting
+        working-directory: admin
+        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Analyze admin app
+        working-directory: admin
+        run: flutter analyze --fatal-infos
+      - name: Test admin app
+        working-directory: admin
+        run: flutter test --reporter expanded
+      - name: Build admin web app
+        working-directory: admin
+        run: flutter build web --release
+      - name: Upload student coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: student-coverage-${{ github.sha }}
+          path: coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 30
 
+  backend-quality:
+    name: Backend tests and dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v5
+      - name: Configure Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Test Edge Function helpers
+        run: deno test supabase/functions
+      - name: Check backend helper formatting
+        run: deno fmt --check supabase/functions/_shared
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked Node dependencies
+        run: npm ci
+      - name: Audit Node dependencies
+        run: npm audit --audit-level=high
+
+  release-verify:
+    name: Windows release verification
+    needs: [flutter-quality, backend-quality]
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v5
+      - name: Configure Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.2"
+          channel: stable
+          cache: true
       - name: Record Flutter doctor
         shell: pwsh
         run: flutter doctor -v
-
-      - name: Run VI26 automated gates
+      - name: Run VI26 automated release gates
         shell: pwsh
         run: ./scripts/verify-release.ps1
-
       - name: Upload verification evidence and APKs
         if: always()
         uses: actions/upload-artifact@v4

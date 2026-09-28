@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { requireRateLimitSalt, validatedImageDataUrls } from '../_shared/validation.ts'
 
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' }
 
@@ -19,13 +20,22 @@ Deno.serve(async (request) => {
   if (!apiKey) return Response.json({ error: 'Question scanner is not configured' }, { status: 503, headers: cors })
 
   const body = await request.json()
-  const images = Array.isArray(body.images) ? body.images.slice(0, 3).filter((value: unknown) => typeof value === 'string' && value.toString().startsWith('data:image/')) : []
+  let images: string[]
+  try {
+    images = validatedImageDataUrls(body.images)
+  } catch {
+    return Response.json({ error: 'An image is too large', requestId }, { status: 413, headers: cors })
+  }
   if (images.length === 0) return Response.json({ error: 'At least one image is required' }, { status: 400, headers: cors })
-  if (images.some((image: string) => image.length > 6_000_000)) return Response.json({ error: 'An image is too large' }, { status: 413, headers: cors })
 
   // Limit each authenticated learner independently. Invalid requests are rejected
   // above and do not consume an attempt.
-  const salt = Deno.env.get('RATE_LIMIT_SALT') ?? 'configure-rate-limit-salt'
+  let salt: string
+  try {
+    salt = requireRateLimitSalt(Deno.env.get('RATE_LIMIT_SALT'))
+  } catch {
+    return Response.json({ error: 'Question scanner rate limiting is not configured', requestId }, { status: 503, headers: cors })
+  }
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${salt}:scan:${user.id}`))
   const clientHash = Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('')
   const since = new Date(Date.now() - 60_000).toISOString()

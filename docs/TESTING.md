@@ -11,6 +11,7 @@ the product instead of appearing as one large end-to-end failure.
 | State and persistence | `test/store_test.dart` | Verifies progress, bookmarks, scores, streaks, accessibility preferences, legacy-secret cleanup, remote-content hydration, and safe API headers. |
 | Student UI | `test/widget_test.dart`, `test/accessibility_widget_test.dart` | Covers public/private content separation, notices, narrow screens, large text, and key navigation. |
 | Admin UI and utilities | `admin/test/widget_test.dart` | Covers safe unconfigured startup, multiline form parsing, field decoration, and sanitized error messages. |
+| Edge Function helpers | `supabase/functions/_shared/validation_test.ts` | Covers rate-limit configuration, learner-name sanitization, message limits, and image data-URL validation. |
 | Static and release gates | `scripts/verify-release.ps1` | Enforces formatting, analysis, all student/admin tests, admin web compilation, secret scanning, version consistency, and optional release APK builds. |
 
 ## Local commands
@@ -40,6 +41,15 @@ Run every code gate without building release APKs:
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1 -AllowDirty -SkipApk
 ```
+
+Run backend helper tests:
+
+```powershell
+deno test supabase/functions
+```
+
+CI enforces a 40% student-app line-coverage floor. Raise the threshold as
+networking, authentication, scanning, and administrative workflows gain tests.
 
 ## Manual release scheme
 

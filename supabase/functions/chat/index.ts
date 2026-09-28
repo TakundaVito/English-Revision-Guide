@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { normalizeMessage, requireRateLimitSalt, sanitizeStudentName, validatedImageDataUrls } from '../_shared/validation.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,7 +18,12 @@ Deno.serve(async (request) => {
   if (!user) return Response.json({ error: 'Please sign in again', requestId }, { status: 401, headers: corsHeaders })
 
   const clientAddress = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
-  const salt = Deno.env.get('RATE_LIMIT_SALT') ?? 'configure-rate-limit-salt'
+  let salt: string
+  try {
+    salt = requireRateLimitSalt(Deno.env.get('RATE_LIMIT_SALT'))
+  } catch {
+    return Response.json({ error: 'AI service rate limiting is not configured', requestId }, { status: 503, headers: corsHeaders })
+  }
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${salt}:${clientAddress}`))
   const clientHash = Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('')
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
@@ -33,12 +39,16 @@ Deno.serve(async (request) => {
   await admin.from('chat_rate_limits').insert({ client_hash: clientHash })
 
   const body = await request.json()
-  const message = String(body.message ?? '').trim().slice(0, 4000)
-  const studentName = String(body.student ?? 'Student').replace(/[^\p{L}\p{N} .'-]/gu, '').trim().slice(0, 60) || 'Student'
+  const message = normalizeMessage(body.message)
+  const studentName = sanitizeStudentName(body.student)
   const history = Array.isArray(body.history) ? body.history.slice(-12) : []
-  const images = Array.isArray(body.images) ? body.images.slice(0, 3).filter((value: unknown) => typeof value === 'string' && value.toString().startsWith('data:image/')) : []
+  let images: string[]
+  try {
+    images = validatedImageDataUrls(body.images)
+  } catch {
+    return Response.json({ error: 'An attachment is too large', requestId }, { status: 413, headers: corsHeaders })
+  }
   if (!message) return Response.json({ error: 'Message is required' }, { status: 400, headers: corsHeaders })
-  if (images.some((image: string) => image.length > 6_000_000)) return Response.json({ error: 'An attachment is too large', requestId }, { status: 413, headers: corsHeaders })
 
   const instructions = `You are EmmaPrep, a warm, focused ZIMSEC O-Level English Language 4005 Paper 1 and Paper 2 examination coach for ${studentName}.
 Default to drill mode: ask one syllabus-aligned question, wait, mark the answer, briefly correct the exact mistake, then ask the next suitable question. Prefer testing over long theory. Adapt among Foundation, Examination and Challenge difficulty using recent answers. Infer and privately track the current topic, questions already asked, correct/wrong streaks, weak areas, mastered areas and most recent mistake from the supplied conversation. Never display that internal state and do not repeat a question unnecessarily.
