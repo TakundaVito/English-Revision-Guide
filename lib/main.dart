@@ -25,17 +25,6 @@ const evaluatorName = String.fromEnvironment(
   defaultValue: 'Prospective partner',
 );
 const evaluationFeedbackUrl = String.fromEnvironment('EMMAPREP_FEEDBACK_URL');
-bool get personalEdition {
-  if (!supabaseReady) return false;
-  return Supabase
-          .instance
-          .client
-          .auth
-          .currentUser
-          ?.appMetadata['personal_edition'] ==
-      true;
-}
-
 bool supabaseReady = false;
 
 String _encodeJpegDataUrl(Uint8List bytes) =>
@@ -58,8 +47,7 @@ String signedInStudentInitial() {
   return name.characters.first.toUpperCase();
 }
 
-String learnerDisplayName() =>
-    personalEdition ? 'Emmaculate' : signedInStudentName();
+String learnerDisplayName() => signedInStudentName();
 
 String coachDisplayText(String raw) {
   var text = raw
@@ -1965,7 +1953,7 @@ class StudentLoginPage extends StatefulWidget {
 }
 
 class _StudentLoginPageState extends State<StudentLoginPage> {
-  final name = TextEditingController(text: personalEdition ? 'Emmaculate' : '');
+  final name = TextEditingController();
   final email = TextEditingController();
   final password = TextEditingController();
   bool create = false, busy = false, hidePassword = true;
@@ -2058,8 +2046,6 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
                     Text(
                       create
                           ? 'Your progress and learning space begin here.'
-                          : personalEdition
-                          ? 'Sign in with the credentials Takunda created for you.'
                           : 'Sign in to continue your ZIMSEC English revision.',
                       textAlign: TextAlign.center,
                     ),
@@ -2511,7 +2497,7 @@ class Home extends StatelessWidget {
                   const SizedBox(width: 13),
                   Expanded(
                     child: Text(
-                      '${personalEdition ? 'Emma’s exam tip' : 'Exam tip'}\nRead every command word twice. It tells you what the examiner rewards.',
+                      'Exam tip\nRead every command word twice. It tells you what the examiner rewards.',
                       style: const TextStyle(height: 1.4),
                     ),
                   ),
@@ -2519,58 +2505,6 @@ class Home extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          if (personalEdition)
-            InkWell(
-              borderRadius: BorderRadius.circular(22),
-              onTap: () => Navigator.push(
-                c,
-                MaterialPageRoute(builder: (_) => const MotivationPage()),
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [plum, coral]),
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: const Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.white24,
-                      child: Icon(
-                        Icons.favorite_rounded,
-                        color: Color(0xffffb6c7),
-                      ),
-                    ),
-                    SizedBox(width: 13),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'For Emmaculate',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          SizedBox(height: 3),
-                          Text(
-                            'A message from Takunda, always here when you need courage.',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              height: 1.35,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_right_rounded, color: Colors.white70),
-                  ],
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -2899,101 +2833,6 @@ class AccessibilityPage extends StatelessWidget {
           ),
         ],
       ),
-    ),
-  );
-}
-
-class MotivationPage extends StatelessWidget {
-  const MotivationPage({super.key});
-
-  Future<void> openDeveloperSite() async {
-    await launchUrl(
-      Uri.parse('https://takunda.vito.co.zw'),
-      mode: LaunchMode.externalApplication,
-    );
-  }
-
-  @override
-  Widget build(BuildContext c) => Scaffold(
-    backgroundColor: const Color(0xff130f16),
-    appBar: AppBar(
-      backgroundColor: Colors.transparent,
-      foregroundColor: Colors.white,
-      title: const Text('For Emmaculate'),
-    ),
-    body: ListView(
-      padding: const EdgeInsets.fromLTRB(22, 8, 22, 32),
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: Container(
-            color: Colors.black,
-            padding: const EdgeInsets.all(12),
-            child: Image.asset(
-              'assets/branding/takunda_vito_logo.png',
-              height: 220,
-              fit: BoxFit.contain,
-              semanticLabel: 'Takunda Vito logo',
-            ),
-          ),
-        ),
-        const SizedBox(height: 26),
-        const Icon(Icons.favorite_rounded, color: Color(0xffff87a8), size: 42),
-        const SizedBox(height: 12),
-        Text(
-          'My dearest Emmaculate,',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 18),
-        const Text(
-          'You can do this if you put your mind to it. Every lesson you complete and every question you practise brings you closer to the result you deserve. Believe in yourself, stay patient, and keep going—even on the difficult days.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white70, fontSize: 17, height: 1.65),
-        ),
-        const SizedBox(height: 18),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xff4e2148),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: const Color(0xffff87a8).withValues(alpha: .35),
-            ),
-          ),
-          child: const Text(
-            'I’ll always be there for you. I love you—always and forever.\n\n— Takunda',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 19,
-              height: 1.55,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-        const Text(
-          'Be brave. Be consistent. Be Emmaculate. ✦',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Color(0xffffb6c7),
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 30),
-        TextButton.icon(
-          onPressed: openDeveloperSite,
-          icon: const Icon(Icons.language_rounded),
-          label: const Text('Developed by Takunda Vito • takunda.vito.co.zw'),
-          style: TextButton.styleFrom(foregroundColor: const Color(0xff79c9ff)),
-        ),
-      ],
     ),
   );
 }

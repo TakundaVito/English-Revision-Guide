@@ -814,60 +814,47 @@ class UsersPage extends StatelessWidget {
   }
 
   Future<void> createStudent(BuildContext context) async {
-    final name = TextEditingController(text: 'Emmaculate');
+    final name = TextEditingController();
     final email = TextEditingController();
     final password = TextEditingController();
-    var privateExperience = true;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialog) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Create student credentials'),
-          content: SizedBox(
-            width: 520,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Field(name, 'Student name'),
-                Field(email, 'Email'),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: TextField(
-                    controller: password,
-                    obscureText: true,
-                    decoration: input(
-                      'Temporary password — at least 8 characters',
-                    ),
+      builder: (dialog) => AlertDialog(
+        title: const Text('Create student credentials'),
+        content: SizedBox(
+          width: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Field(name, 'Student name'),
+              Field(email, 'Email'),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: TextField(
+                  controller: password,
+                  obscureText: true,
+                  decoration: input(
+                    'Temporary password — at least 8 characters',
                   ),
                 ),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Private Emmaculate experience'),
-                  subtitle: const Text(
-                    'Shows her name and Takunda’s personal love notes. Enable only for her account.',
-                  ),
-                  value: privateExperience,
-                  onChanged: (value) =>
-                      setDialogState(() => privateExperience = value),
-                ),
-                const Text(
-                  'The account is confirmed immediately. Give the credentials only to the intended student and ask her to keep them private.',
-                  style: TextStyle(fontSize: 12, height: 1.4),
-                ),
-              ],
-            ),
+              ),
+              const Text(
+                'The account is confirmed immediately. Give the credentials only to the intended student and require a password change during onboarding.',
+                style: TextStyle(fontSize: 12, height: 1.4),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialog, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialog, true),
-              child: const Text('Create account'),
-            ),
-          ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Create account'),
+          ),
+        ],
       ),
     );
     if (confirmed != true || !context.mounted) return;
@@ -879,7 +866,6 @@ class UsersPage extends StatelessWidget {
           'displayName': name.text.trim(),
           'email': email.text.trim(),
           'password': password.text,
-          'personalEdition': privateExperience,
         },
       );
       if (response.status < 200 || response.status >= 300) {
@@ -909,90 +895,41 @@ class UsersPage extends StatelessWidget {
     }
   }
 
-  Future<void> setPrivateExperience(
-    BuildContext context,
-    Map<String, dynamic> student,
-    bool enabled,
-  ) async {
-    try {
-      final response = await Supabase.instance.client.functions.invoke(
-        'admin-students',
-        body: {
-          'action': 'update_personal_edition',
-          'userId': student['user_id'],
-          'enabled': enabled,
-        },
-      );
-      if (response.status < 200 || response.status >= 300) {
-        throw FormatException(response.data.toString());
-      }
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            enabled
-                ? 'Private experience enabled. Ask her to sign out and in once.'
-                : 'Private experience disabled for this account.',
-          ),
-        ),
-      );
-      changed();
-    } catch (error) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Account update failed: ${safeFunctionError(error)}'),
-        ),
-      );
-    }
-  }
-
   @override
-  Widget build(
-    BuildContext context,
-  ) => FutureBuilder<List<Map<String, dynamic>>>(
-    key: ValueKey(revision),
-    future: load(),
-    builder: (context, snapshot) => PageFrame(
-      title: 'Student accounts',
-      subtitle:
-          'One app serves every learner. Protected account metadata controls Emmaculate’s private experience.',
-      action: FilledButton.icon(
-        onPressed: () => createStudent(context),
-        icon: const Icon(Icons.person_add_rounded),
-        label: const Text('Create student'),
-      ),
-      child: snapshot.hasError
-          ? ErrorText(snapshot.error)
-          : !snapshot.hasData
-          ? const Center(child: CircularProgressIndicator())
-          : snapshot.data!.isEmpty
-          ? const Center(child: Text('No student profiles yet.'))
-          : ListView.separated(
-              itemCount: snapshot.data!.length,
-              separatorBuilder: (_, _) => const Divider(),
-              itemBuilder: (_, index) {
-                final row = snapshot.data![index];
-                return ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.person_rounded),
-                  ),
-                  title: Text(row['display_name'].toString()),
-                  subtitle: Text(
-                    row['personal_edition'] == true
-                        ? 'Private Emmaculate experience • Created ${row['created_at']}'
-                        : 'Public learner experience • Created ${row['created_at']}',
-                  ),
-                  trailing: Switch.adaptive(
-                    value: row['personal_edition'] == true,
-                    onChanged: (value) =>
-                        setPrivateExperience(context, row, value),
-                  ),
-                );
-              },
-            ),
-    ),
-  );
+  Widget build(BuildContext context) =>
+      FutureBuilder<List<Map<String, dynamic>>>(
+        key: ValueKey(revision),
+        future: load(),
+        builder: (context, snapshot) => PageFrame(
+          title: 'Student accounts',
+          subtitle: 'Create and review learner accounts for EmmaPrep.',
+          action: FilledButton.icon(
+            onPressed: () => createStudent(context),
+            icon: const Icon(Icons.person_add_rounded),
+            label: const Text('Create student'),
+          ),
+          child: snapshot.hasError
+              ? ErrorText(snapshot.error)
+              : !snapshot.hasData
+              ? const Center(child: CircularProgressIndicator())
+              : snapshot.data!.isEmpty
+              ? const Center(child: Text('No student profiles yet.'))
+              : ListView.separated(
+                  itemCount: snapshot.data!.length,
+                  separatorBuilder: (_, _) => const Divider(),
+                  itemBuilder: (_, index) {
+                    final row = snapshot.data![index];
+                    return ListTile(
+                      leading: const CircleAvatar(
+                        child: Icon(Icons.person_rounded),
+                      ),
+                      title: Text(row['display_name'].toString()),
+                      subtitle: Text('Created ${row['created_at']}'),
+                    );
+                  },
+                ),
+        ),
+      );
 }
 
 class ActivityPage extends StatelessWidget {

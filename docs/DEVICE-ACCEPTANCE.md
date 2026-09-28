@@ -10,7 +10,7 @@ Record **Pass**, **Fail** or **Not tested**. Attach screenshots or logs for fail
 | --- | --- | --- | --- |
 | Install | Correct architecture APK installs without uninstalling the accepted previous version | | |
 | Launch | Cold launch reaches Home without crash or network | | |
-| Header | Emmaculate is centred and oloid branding renders correctly | | |
+| Header | Learner name is centred and oloid branding renders correctly | | |
 | Learn | Paper 1 and Paper 2 lessons open and practical examples remain readable | | |
 | Practice | Mixed and paper drills score answers and show explanations | | |
 | Persistence | Mastery, bookmarks, accuracy, streak and accessibility survive restart | | |

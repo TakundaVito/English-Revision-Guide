@@ -1,6 +1,6 @@
 # EmmaPrep English
 
-EmmaPrep English is a Flutter revision app covering ZIMSEC English Language Paper 1 and Paper 2. Lessons, quizzes, progress and accessibility features work offline. The optional AI coach and content synchronization use a separately operated backend. One APK serves both Emmaculate and public learners through protected account-based personalization.
+EmmaPrep English is a Flutter revision app covering ZIMSEC English Language Paper 1 and Paper 2. Lessons, quizzes, progress and accessibility features work offline. The optional AI coach and content synchronization use a separately operated backend.
 
 Current version: **1.10.0+15**
 
@@ -45,16 +45,6 @@ flutter run -d chrome
 Copy `config.example.json` to the ignored `config.production.json` and set only the backend URL and an optional limited app token. Never place an AI-provider secret in an APK configuration.
 
 Production Android signing uses the ignored `android/key.properties`, based on `android/key.properties.example`, and a keystore stored outside the repository. Local builds fall back to debug signing and must not be distributed as VI26 production releases.
-
-## Account-based private experience
-
-Build one APK:
-
-```powershell
-flutter build apk --release --split-per-abi --dart-define-from-file=config.production.json
-```
-
-In englishTutor, enable **Private Emmaculate experience** only on her account. The setting is stored in protected Supabase `app_metadata`, never in an email check, APK flag or user-editable profile. She must sign out and back in once after the setting changes so her refreshed session receives it. Every other account remains generic and never sees the relationship messages. The Takunda Vito developer branding remains visible to all learners.
 
 ## Smaller release APKs
 

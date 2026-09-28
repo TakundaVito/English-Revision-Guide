@@ -77,7 +77,7 @@ void main() {
     expect(displayed, contains('• Read the command word.'));
   });
 
-  testWidgets('public edition hides private relationship content', (
+  testWidgets('learner home contains only product-facing content', (
     tester,
   ) async {
     await tester.pumpWidget(const EmmaPrep());
@@ -86,8 +86,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1500));
     await tester.pumpAndSettle();
     expect(find.text('Student'), findsOneWidget);
-    expect(find.text('For Emmaculate'), findsNothing);
-    expect(find.textContaining('always and forever'), findsNothing);
+    expect(find.textContaining('private edition'), findsNothing);
     expect(find.text('48-hour Paper 1 route'), findsOneWidget);
     await tester.drag(find.byType(ListView).first, const Offset(0, -500));
     await tester.pumpAndSettle();

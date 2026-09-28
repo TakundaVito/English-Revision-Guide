@@ -70,7 +70,7 @@ flutter run -d chrome --dart-define-from-file=config.local.json
 
 Sign in with the administrator created in step 2. Create lessons and questions as drafts, enable the records that passed review, then publish a version such as `2026.08.1`.
 
-Open **Users** to create Emmaculate's confirmed credentials. Keep **Allow public account creation** off while the app is private; turn it on later when other students may register.
+Open **Users** to create confirmed learner credentials. Keep **Allow public account creation** off for controlled pilots; turn it on only when self-registration is supported.
 
 ## 5. Run or build the learning app
 
