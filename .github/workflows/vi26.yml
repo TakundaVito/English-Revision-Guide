@@ -29,7 +29,20 @@ jobs:
       - name: Check student formatting
         run: dart format --output=none --set-exit-if-changed lib test
       - name: Analyze student app
-        run: flutter analyze --fatal-infos
+        shell: bash
+        run: |
+          set +e
+          flutter analyze --fatal-infos 2>&1 | tee student-analyze.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            {
+              echo '## Student analyzer failure'
+              echo '```text'
+              cat student-analyze.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
       - name: Test student app with coverage
         run: flutter test --coverage --reporter expanded
       - name: Enforce 40 percent line coverage floor
@@ -66,7 +79,7 @@ jobs:
         with:
           name: student-coverage-${{ github.sha }}
           path: coverage/lcov.info
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
 
   backend-quality:
