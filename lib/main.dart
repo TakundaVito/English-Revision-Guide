@@ -12,8 +12,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'services/coach_text.dart';
+import 'models/lesson.dart';
+import 'models/question.dart';
 
 export 'services/coach_text.dart';
+export 'models/lesson.dart';
+export 'models/question.dart';
 
 const plum = Color(0xff2854c7),
     coral = Color(0xffff5f9e),
@@ -88,36 +92,6 @@ Future<void> main() async {
     supabaseReady = true;
   }
   runApp(const EmmaPrep());
-}
-
-class Lesson {
-  final String id, paper, title, sub, intro;
-  final IconData icon;
-  final Color color;
-  final List<String> notes, check;
-  const Lesson(
-    this.id,
-    this.paper,
-    this.title,
-    this.sub,
-    this.intro,
-    this.icon,
-    this.color,
-    this.notes,
-    this.check,
-  );
-
-  factory Lesson.fromJson(Map<String, dynamic> json) => Lesson(
-    'remote-${json['id'] ?? json['title'].hashCode}',
-    json['paper'] == 'Paper 2' ? 'Paper 2' : 'Paper 1',
-    json['title']?.toString() ?? 'Updated lesson',
-    json['subtitle']?.toString() ?? 'Content update',
-    json['introduction']?.toString() ?? '',
-    Icons.cloud_download_rounded,
-    json['paper'] == 'Paper 2' ? const Color(0xff5679b6) : coral,
-    List<String>.from(json['notes'] ?? const []),
-    List<String>.from(json['checklist'] ?? const []),
-  );
 }
 
 ({String worked, String task}) practicalExample(
@@ -909,39 +883,6 @@ const lessons = <Lesson>[
     ],
   ),
 ];
-
-class Question {
-  final String paper, q, why, examStyle;
-  final List<String> a;
-  final int correct;
-  const Question(
-    this.paper,
-    this.q,
-    this.a,
-    this.correct,
-    this.why, {
-    this.examStyle = 'zimsec-4005',
-  });
-  factory Question.fromJson(Map<String, dynamic> json) {
-    if (json['examStyle'] != 'zimsec-4005') {
-      throw const FormatException('Only ZIMSEC 4005 questions are accepted');
-    }
-    final answers = List<String>.from(json['answers'] ?? const []);
-    final correctIndex = (json['correctIndex'] as num?)?.toInt() ?? -1;
-    if (answers.length != 4 ||
-        correctIndex < 0 ||
-        correctIndex >= answers.length) {
-      throw const FormatException('Invalid ZIMSEC practice question');
-    }
-    return Question(
-      json['paper'] == 'Paper 2' ? 'Paper 2' : 'Paper 1',
-      json['question']?.toString() ?? '',
-      answers,
-      correctIndex,
-      json['explanation']?.toString() ?? '',
-    );
-  }
-}
 
 const bank = <Question>[
   Question(
