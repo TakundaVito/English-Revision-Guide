@@ -56,7 +56,7 @@ Replace the placeholder below only inside Play Console:
 
 - Privacy policy: `https://takunda.vito.co.zw/emmaprep/privacy` *(publish after review)*
 - Account deletion: `https://takunda.vito.co.zw/emmaprep/delete-account` *(publish after review)*
-- Support: `[SUPPORT EMAIL OR WEBSITE]`
+- Support: `takunda@vito.co.zw`
 
 ## Required graphics
 

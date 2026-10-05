@@ -5,8 +5,8 @@ approval before publishing this document or linking it from Google Play.
 
 **Effective date:** `[YYYY-MM-DD]`  
 **Developer:** `[legal developer or organisation name]`  
-**Support:** `[support email]`  
-**Privacy contact:** `[privacy email or web form]`  
+**Support:** `takunda@vito.co.zw`  
+**Privacy contact:** `takunda@vito.co.zw`  
 **Public deletion request URL:** `https://takunda.vito.co.zw/emmaprep/delete-account` *(publish after review)*
 
 ## What English Prep is
@@ -72,7 +72,7 @@ needed, subject to documented legal obligations.
 Secrets are kept in server-side secret storage, not in the mobile bundle.
 Access is restricted by authentication and database policies. No internet
 service can guarantee absolute security; suspected incidents should be
-reported to `[privacy email]`.
+reported to `takunda@vito.co.zw`.
 
 ## Children and guardians
 
@@ -84,14 +84,14 @@ guardian contact and deletion route.
 ## Your choices
 
 You may request access, correction or deletion of personal information by using
-the public deletion URL or contacting `[privacy email]`. Account deletion must
+the public deletion URL or contacting `takunda@vito.co.zw`. Account deletion must
 remove the account and associated personal data except for narrowly documented
 legal retention.
 
 ## Changes and complaints
 
 We will publish material policy changes at this URL and update the effective
-date. Contact `[privacy contact]` first for concerns, and contact the relevant
+date. Contact `takunda@vito.co.zw` first for concerns, and contact the relevant
 data-protection authority where appropriate.
 
 ## Approval record
