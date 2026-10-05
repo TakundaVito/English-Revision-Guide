@@ -29,6 +29,8 @@ const evaluatorName = String.fromEnvironment(
   defaultValue: 'Prospective partner',
 );
 const evaluationFeedbackUrl = String.fromEnvironment('EMMAPREP_FEEDBACK_URL');
+const accountDeletionUrl =
+    'https://takunda.vito.co.zw/emmaprep/delete-account';
 bool supabaseReady = false;
 
 String _encodeJpegDataUrl(Uint8List bytes) =>
@@ -2629,6 +2631,13 @@ class AccessibilityPage extends StatelessWidget {
     );
   }
 
+  Future<void> openAccountDeletionPage() async {
+    await launchUrl(
+      Uri.parse(accountDeletionUrl),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
   @override
   Widget build(BuildContext c) => Scaffold(
     appBar: AppBar(title: const Text('Accessibility & appearance')),
@@ -2663,6 +2672,11 @@ class AccessibilityPage extends StatelessWidget {
                   label: const Text('Sign out'),
                 ),
               ),
+            ),
+            OutlinedButton.icon(
+              onPressed: openAccountDeletionPage,
+              icon: const Icon(Icons.delete_forever_rounded),
+              label: const Text('Request account deletion'),
             ),
             const SizedBox(height: 14),
           ],
