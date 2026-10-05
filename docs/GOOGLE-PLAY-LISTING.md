@@ -54,8 +54,8 @@ Replace the placeholder below only inside Play Console:
 
 ## Required links before submission
 
-- Privacy policy: `[PUBLIC HTTPS PRIVACY POLICY URL]`
-- Account deletion: `[PUBLIC HTTPS ACCOUNT-DELETION URL]`
+- Privacy policy: `https://takunda.vito.co.zw/emmaprep/privacy` *(publish after review)*
+- Account deletion: `https://takunda.vito.co.zw/emmaprep/delete-account` *(publish after review)*
 - Support: `[SUPPORT EMAIL OR WEBSITE]`
 
 ## Required graphics

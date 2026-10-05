@@ -7,7 +7,7 @@ approval before publishing this document or linking it from Google Play.
 **Developer:** `[legal developer or organisation name]`  
 **Support:** `[support email]`  
 **Privacy contact:** `[privacy email or web form]`  
-**Public deletion request URL:** `[HTTPS account-deletion URL]`
+**Public deletion request URL:** `https://takunda.vito.co.zw/emmaprep/delete-account` *(publish after review)*
 
 ## What English Prep is
 

@@ -43,7 +43,7 @@ the privacy adviser has approved a secure verification process.
 
 ## Owner fields
 
-- Public URL: `[HTTPS URL]`
+- Public URL: `https://takunda.vito.co.zw/emmaprep/delete-account` *(publish after review)*
 - Support address: `[monitored address]`
 - Maximum completion time: `[time period]`
 - Production deletion function/migration: `[commit or deployment ID]`
