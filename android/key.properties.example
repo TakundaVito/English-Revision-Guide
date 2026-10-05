@@ -1,4 +1,7 @@
+# Copy this file to android/key.properties. The copied file is ignored by Git.
+# Use the Google Play upload key here; Google Play App Signing should hold the
+# app-signing key. Keep the keystore outside the repository and back it up.
 storePassword=replace-with-private-value
 keyPassword=replace-with-private-value
-keyAlias=emmaprep
-storeFile=C:\\secure\\outside-repository\\emmaprep-release.jks
+keyAlias=emmaprep-upload
+storeFile=C:\\secure\\outside-repository\\emmaprep-upload.jks

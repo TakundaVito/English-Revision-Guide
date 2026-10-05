@@ -49,7 +49,7 @@ flutter run -d chrome
 
 Copy `config.example.json` to the ignored `config.production.json` and set only the backend URL and an optional limited app token. Never place an AI-provider secret in an APK configuration.
 
-Production Android signing uses the ignored `android/key.properties`, based on `android/key.properties.example`, and a keystore stored outside the repository. Local builds fall back to debug signing and must not be distributed as VI26 production releases.
+Production Android signing uses the ignored `android/key.properties`, based on `android/key.properties.example`, and an upload keystore stored outside the repository. CI may use debug-signed APKs for installation verification, but the Google Play bundle build refuses to run without the private upload key. Follow `docs/GOOGLE-PLAY-RELEASE.md` for the production process.
 
 ## Smaller release APKs
 

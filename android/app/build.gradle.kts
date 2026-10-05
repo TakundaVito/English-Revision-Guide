@@ -7,6 +7,14 @@ val hasReleaseSigning = keystorePropertiesFile.exists()
 if (hasReleaseSigning) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
+val isPlayBundleBuild = gradle.startParameter.taskNames.any {
+    it.contains("bundleRelease", ignoreCase = true)
+}
+if (isPlayBundleBuild && !hasReleaseSigning) {
+    throw GradleException(
+        "Google Play bundles require android/key.properties and the private upload keystore.",
+    )
+}
 
 plugins {
     id("com.android.application")
@@ -16,7 +24,9 @@ plugins {
 
 android {
     namespace = "com.emmaprep.emma_prep_english"
-    compileSdk = flutter.compileSdkVersion
+    // Google Play requires new phone apps submitted after 31 August 2026 to
+    // target Android 16 (API 36) or newer.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -30,7 +40,7 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -48,8 +58,8 @@ android {
 
     buildTypes {
         release {
-            // Local/CI verification can fall back to debug signing. A production
-            // VI26 gate must provide android/key.properties and a private keystore.
+            // CI may build debug-signed APKs for installation verification, but
+            // bundleRelease fails above unless the private upload key is present.
             signingConfig = if (hasReleaseSigning) {
                 signingConfigs.getByName("release")
             } else {
